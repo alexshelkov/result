@@ -18,22 +18,26 @@ type AppErr = E1 | E2 | E3<number>;
 
 describe('result', () => {
   it('returns data with ok method', () => {
-    expect.assertions(2);
+    expect.assertions(4);
 
     // eslint-disable-next-line jest/no-if
     const result: Result<string, Err> = Math.random() !== -1 ? ok('data') : fail('');
 
+    expect(result.isOk()).toBe(true);
+    expect(result.isErr()).toBe(false);
     expect(result.ok()).toStrictEqual('data');
     expect(() => result.err()).toThrow("Can't access error on data");
   });
 
   it('returns error with err method', () => {
-    expect.assertions(3);
+    expect.assertions(5);
 
     const result: Result<string, E2> =
       // eslint-disable-next-line jest/no-if
       Math.random() !== -1 ? fail('e2', { stringAdded: 'e2data' }) : ok('');
 
+    expect(result.isOk()).toBe(false);
+    expect(result.isErr()).toBe(true);
     expect(() => result.ok()).toThrow("Can't access data on error");
     expect(result.err().type).toStrictEqual('e2');
     expect(result.err().stringAdded).toStrictEqual('e2data');

@@ -1,6 +1,20 @@
 import { Result, toResult, Err } from '../index';
 
 describe('to result', () => {
+  it('not an object throws an error', () => {
+    expect.assertions(2);
+
+    expect(() => toResult(null)).toThrow('Unexpected input');
+
+    expect(() => toResult('123')).toThrow('Unexpected input');
+  });
+
+  it('no status will throws an error', () => {
+    expect.assertions(1);
+
+    expect(() => toResult({ data: 1 })).toThrow('Unexpected input');
+  });
+
   it('will cast to success', () => {
     expect.assertions(1);
 
