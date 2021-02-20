@@ -3,7 +3,7 @@ Type-safe error handling without exceptions
 Flexible and explicit error handling with a small flavor of functional languages.
 
 [![TypeScript](https://img.shields.io/badge/%3C%2F%3E-TypeScript-%230074c1.svg)](https://www.typescriptlang.org/)
-[![Build Status](https://travis-ci.org/alexshelkov/result.svg?branch=master)](https://travis-ci.org/alexshelkov/result)
+[![Test](https://github.com/alexshelkov/result/actions/workflows/test.yml/badge.svg)](https://github.com/alexshelkov/result/actions/workflows/test.yml)
 [![Coverage Status](https://coveralls.io/repos/github/alexshelkov/result/badge.svg?branch=master)](https://coveralls.io/github/alexshelkov/result?branch=master)
 
 Result type allows you go from this:
