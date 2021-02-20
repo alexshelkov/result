@@ -15,7 +15,7 @@ describe('util', () => {
     expect.assertions(2);
 
     const r1: Result<string, Err> = ok('');
-    const r2: Result<string, Err> = fail('');
+    const r2: Result<string, Err> = fail<Err>('');
 
     expect(compare(r1, r2)).toStrictEqual(r2);
 
@@ -37,5 +37,13 @@ describe('util', () => {
     const r4: Result<string, Err> = fail('', { order: 1 });
 
     expect(compare(r3, r4)).toStrictEqual(r3);
+  });
+
+  it('undefined error type must not have error object', () => {
+    expect.assertions(1);
+
+    const r: Result<never, undefined> = fail<undefined>();
+
+    expect(r.error).toBeUndefined();
   });
 });

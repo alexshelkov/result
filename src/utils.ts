@@ -1,4 +1,45 @@
-import { Status, Success, Failure, FailureException, Result, Err } from './types';
+import { Success, Failure, Result, Err, PartialSuccess, PartialFailure } from './types';
+
+export class FailureException<Fail> extends Error implements Failure<Fail> {
+  status: 'error';
+
+  error: Fail;
+
+  code?: number;
+
+  order?: number;
+
+  constructor(t: string, e: Fail, o?: number, m?: string, c?: number) {
+    super(m || t);
+
+    Object.setPrototypeOf(this, FailureException.prototype);
+
+    this.status = 'error';
+    this.order = o;
+    this.error = e;
+    this.code = c;
+    this.name = 'FailureException';
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  isOk(): false {
+    return false;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  isErr(): true {
+    return true;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  ok(): never {
+    throw new Error("Can't access data on error");
+  }
+
+  err(): this extends PartialFailure<Fail> ? Fail : never {
+    return this.error as this extends PartialFailure<Fail> ? Fail : never;
+  }
+}
 
 type OkMessage = {
   code?: number;
@@ -18,11 +59,16 @@ export const ok = <Data>(data: Data, { code, order, skip }: OkMessage = {}): Suc
     order = -Infinity;
   }
 
-  return {
-    status: Status.Success,
+  const partial = {
+    status: 'success',
     data,
     code,
     order,
+  } as PartialSuccess<Data>;
+
+  return {
+    ...partial,
+
     isOk() {
       return true;
     },
@@ -38,32 +84,47 @@ export const ok = <Data>(data: Data, { code, order, skip }: OkMessage = {}): Suc
   };
 };
 
-export const fail = <Error extends Err = never>(
-  type: Error['type'],
+export const isErr = (input: unknown): input is Err =>
+  typeof input === 'object' && input !== null && 'type' in input;
+
+export const fail = <Error extends Err | undefined = never>(
+  type: Error extends Err ? Error['type'] : undefined = undefined as Error extends Err
+    ? Error['type']
+    : undefined,
   { message, code, order, skip, ...error }: ErrorMessage<Error> = {} as ErrorMessage<Error>
 ): Failure<Error> => {
-  const failure: Error = {
-    type,
-    message,
-    ...error,
-  } as Error;
+  const failure = ((typeof type !== 'undefined'
+    ? {
+        type,
+        message,
+        ...error,
+      }
+    : undefined) as unknown) as Error;
 
   if (skip) {
     order = -Infinity;
   }
 
-  const exception = new FailureException(type, failure, order, message, code);
+  const exception = new FailureException(
+    message || (type as string) || 'Unknown',
+    failure,
+    order,
+    message,
+    code
+  );
 
   if (exception.code === undefined) {
     delete exception.code;
   }
 
-  if (exception.error.message === undefined) {
-    delete exception.error.message;
-  }
-
   if (exception.order === undefined) {
     delete exception.order;
+  }
+
+  if (isErr(exception.error)) {
+    if (exception.error.message === undefined) {
+      delete exception.error.message;
+    }
   }
 
   return exception;

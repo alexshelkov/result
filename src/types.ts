@@ -1,73 +1,32 @@
-export const enum Status {
-  Success = 'success',
-  Error = 'error',
-}
-
 interface CompareResult {
-  status: Status;
+  status: 'success' | 'error';
   order?: number;
   code?: number;
 }
 
-interface ResultHelpers<Data, Fail> {
-  isOk(): this is Success<Data>;
+export interface ResultHelpers<Data, Fail> {
+  isOk(): this is PartialSuccess<Data>;
 
-  isErr(): this is Failure<Fail>;
+  isErr(): this is PartialFailure<Fail>;
 
-  ok(): this extends Success<Data> ? this['data'] : never;
+  ok(): this extends PartialSuccess<Data> ? Data : never;
 
-  err(): this extends Failure<Fail> ? this['error'] : never;
+  err(): this extends PartialFailure<Fail> ? Fail : never;
 }
 
-export interface Success<Data> extends CompareResult, ResultHelpers<Data, unknown> {
-  status: Status.Success;
+export interface PartialSuccess<Data> extends CompareResult {
+  status: 'success';
   data: Data;
 }
 
-export interface Failure<Fail> extends Error, CompareResult, ResultHelpers<unknown, Fail> {
-  status: Status.Error;
+export interface PartialFailure<Fail> extends Error, CompareResult {
+  status: 'error';
   error: Fail;
 }
 
-export class FailureException<Fail> extends Error implements Failure<Fail> {
-  status: Status.Error;
+export interface Success<Data> extends PartialSuccess<Data>, ResultHelpers<Data, unknown> {}
 
-  error: Fail;
-
-  code?: number;
-
-  order?: number;
-
-  constructor(t: string, e: Fail, o?: number, m?: string, c?: number) {
-    super(m || t);
-
-    Object.setPrototypeOf(this, FailureException.prototype);
-
-    this.status = Status.Error;
-    this.order = o;
-    this.error = e;
-    this.code = c;
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  isOk(): false {
-    return false;
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  isErr(): true {
-    return true;
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  ok(): never {
-    throw new Error("Can't access data on error");
-  }
-
-  err(): this extends Failure<Fail> ? this['error'] : never {
-    return this.error as never;
-  }
-}
+export interface Failure<Error> extends PartialFailure<Error>, ResultHelpers<unknown, Error> {}
 
 export type Result<Data, Error> = Success<Data> | Failure<Error>;
 

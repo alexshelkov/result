@@ -17,6 +17,53 @@ interface E3<T> extends Err {
 type AppErr = E1 | E2 | E3<number>;
 
 describe('result', () => {
+  it('sets the code correctly', () => {
+    expect.assertions(1);
+
+    const result: Result<string, Err> = fail('', { code: 400 });
+
+    expect(result.code).toStrictEqual(400);
+  });
+
+  it('error is an exception', () => {
+    expect.assertions(1);
+
+    const result: Result<string, Err> = fail();
+
+    expect(result).toBeInstanceOf(Error);
+  });
+
+  it('sets the message correctly', () => {
+    expect.assertions(2);
+
+    const result: Result<string, Err> = fail('', { message: 'Some error' });
+
+    expect(result.message).toStrictEqual('Some error');
+    expect(result.err().message).toStrictEqual('Some error');
+  });
+
+  it('sets the empty string message correctly', () => {
+    expect.assertions(3);
+
+    const result: Result<string, Err> = fail('');
+
+    expect(result.message).toStrictEqual('Unknown');
+    expect(result.err().message).toBeUndefined();
+
+    const result2: Result<string, Err> = fail();
+
+    expect(result2.message).toStrictEqual('Unknown');
+  });
+
+  it('sets the type message correctly', () => {
+    expect.assertions(2);
+
+    const result: Result<string, Err> = fail('Err type');
+
+    expect(result.message).toStrictEqual('Err type');
+    expect(result.err().message).toBeUndefined();
+  });
+
   it('returns data with ok method', () => {
     expect.assertions(4);
 
@@ -27,6 +74,19 @@ describe('result', () => {
     expect(result.isErr()).toBe(false);
     expect(result.ok()).toStrictEqual('data');
     expect(() => result.err()).toThrow("Can't access error on data");
+  });
+
+  it('works when fail called with undefined', () => {
+    expect.assertions(4);
+
+    const result: Result<string, undefined> =
+      // eslint-disable-next-line jest/no-if
+      Math.random() !== -1 ? fail() : ok('');
+
+    expect(result.isOk()).toBe(false);
+    expect(result.isErr()).toBe(true);
+    expect(() => result.ok()).toThrow("Can't access data on error");
+    expect(result.err()).toBeUndefined();
   });
 
   it('returns error with err method', () => {

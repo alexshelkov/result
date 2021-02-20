@@ -11,4 +11,4 @@ jobs:
   include:
     - stage: Run tests
       node_js: node
-      script: jest --coverage && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js && rm -rf ./coverage
+      script: jest --coverage --collectCoverageFrom=src/** && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js && rm -rf ./coverage

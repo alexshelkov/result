@@ -1,7 +1,7 @@
-import { Err, Failure, Result, Status, Success } from './types';
-import { ok, fail } from './utils';
+import { Err, Failure, Result, Success } from './types';
+import { fail, ok } from './utils';
 
-const isHaveStatus = (input: unknown): input is { status: Status } => {
+const isHaveStatus = (input: unknown): input is { status: 'error' | 'success' } => {
   if (!(typeof input === 'object' && input !== null)) {
     return false;
   }
@@ -14,15 +14,15 @@ export const isOkLike = <Data>(input: unknown): input is Success<Data> => {
     return false;
   }
 
-  return input.status === Status.Success;
+  return input.status === 'success';
 };
 
-export const isFailureLike = <Error>(input: unknown): input is Failure<Error & Err> => {
+export const isFailureLike = <Error extends Err>(input: unknown): input is Failure<Error> => {
   if (!isHaveStatus(input)) {
     return false;
   }
 
-  if (input.status !== Status.Error) {
+  if (input.status !== 'error') {
     return false;
   }
 
@@ -43,11 +43,13 @@ export const isFailureLike = <Error>(input: unknown): input is Failure<Error & E
   );
 };
 
-export const toResult = <Data, Error>(input: unknown): Result<Data, Error> => {
+export const toResult = <Data, Error extends Err>(input: unknown): Result<Data, Error> => {
   if (isOkLike<Data>(input)) {
     return ok(input.data);
-  } if (isFailureLike<Error>(input)) {
-    return fail(input.error.type as typeof input['error']['type'], input.error);
+  }
+  if (isFailureLike<Error>(input)) {
+    // should really not use never here
+    return fail<Error>(input.error.type as never, input.error);
   }
 
   throw new Error('Unexpected input');
