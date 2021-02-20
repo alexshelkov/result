@@ -19,16 +19,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
+      - name: Setup Node
+        uses: actions/setup-node@v2
         with:
-          repo-token: ${{ github.token }}
-          repository: ${{ github.repository }}
-          GITHUB_TOKEN: ${{ github.token }}
+          node-version: ${{ matrix.node_version }}
 
       - run: npm ci
       - run: npm run check
-      - run: npm run build:lib
+      - run: npm run test
 
       - name: Coveralls GitHub Action
         if: matrix.node-version == '14.x'
