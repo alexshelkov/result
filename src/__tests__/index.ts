@@ -1,4 +1,4 @@
-import { Err, fail, Failure, ok, Result } from '../index';
+import { Err, fail, Failure, ok, nope, Result } from '../index';
 
 interface E1 extends Err {
   type: 'e1';
@@ -28,7 +28,7 @@ describe('result', () => {
   it('error is an exception', () => {
     expect.assertions(1);
 
-    const result: Result<string, Err> = fail();
+    const result: Result<string, undefined> = fail<undefined>(undefined);
 
     expect(result).toBeInstanceOf(Error);
   });
@@ -50,7 +50,7 @@ describe('result', () => {
     expect(result.message).toStrictEqual('Unknown');
     expect(result.err().message).toBeUndefined();
 
-    const result2: Result<string, Err> = fail();
+    const result2: Result<string, undefined> = fail<undefined>(undefined);
 
     expect(result2.message).toStrictEqual('Unknown');
   });
@@ -81,7 +81,7 @@ describe('result', () => {
 
     const result: Result<string, undefined> =
       // eslint-disable-next-line jest/no-if
-      Math.random() !== -1 ? fail() : ok('');
+      Math.random() !== -1 ? fail(undefined) : ok('');
 
     expect(result.isOk()).toBe(false);
     expect(result.isErr()).toBe(true);
@@ -132,11 +132,6 @@ describe('result', () => {
   it('will check errors exhaustively', () => {
     expect.assertions(1);
 
-    function badAppError(p: never): never;
-    function badAppError(p: AppErr): never {
-      throw new Error(`Bad app error: ${p.type}`);
-    }
-
     const test1 = (e: Failure<AppErr>) => {
       switch (e.error.type) {
         case 'e1':
@@ -146,10 +141,10 @@ describe('result', () => {
         case 'e3':
           return 3;
         default:
-          badAppError(e.error);
-      }
+          nope(e.error);
 
-      return 0;
+          return 0;
+      }
     };
 
     const err = fail<E1>('e1');

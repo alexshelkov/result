@@ -88,9 +88,7 @@ export const isErr = (input: unknown): input is Err =>
   typeof input === 'object' && input !== null && 'type' in input;
 
 export const fail = <Error extends Err | undefined = never>(
-  type: Error extends Err ? Error['type'] : undefined = undefined as Error extends Err
-    ? Error['type']
-    : undefined,
+  type: Error extends Err ? Error['type'] : undefined,
   { message, code, order, skip, ...error }: ErrorMessage<Error> = {} as ErrorMessage<Error>
 ): Failure<Error> => {
   const failure = ((typeof type !== 'undefined'
@@ -148,3 +146,8 @@ export const compare = <Data1, Error1, Data2, Error2>(
 
   return r2;
 };
+
+export function nope(p: never): never;
+export function nope(_p: unknown): never {
+  throw new Error(`Unreachable`);
+}
