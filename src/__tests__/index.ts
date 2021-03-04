@@ -151,4 +151,12 @@ describe('result', () => {
 
     expect(test1(err)).toStrictEqual(1);
   });
+
+  it('type overwrite', () => {
+    expect.assertions(1);
+
+    const err = fail<Err>('test1', { type: 'test2' } as Err);
+
+    expect(err.error.type).toStrictEqual('test1');
+  });
 });

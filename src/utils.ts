@@ -93,9 +93,9 @@ export const fail = <Error extends Err | undefined = never>(
 ): Failure<Error> => {
   const failure = ((typeof type !== 'undefined'
     ? {
+        ...error,
         type,
         message,
-        ...error,
       }
     : undefined) as unknown) as Error;
 
