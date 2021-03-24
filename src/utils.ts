@@ -1,4 +1,6 @@
-import { Success, Failure, Result, Err, PartialSuccess, PartialFailure } from './types';
+import {
+  Success, Failure, Result, Err, PartialSuccess, PartialFailure,
+} from './types';
 
 export class FailureException<Fail> extends Error implements Failure<Fail> {
   status: 'error';
@@ -84,19 +86,22 @@ export const ok = <Data>(data: Data, { code, order, skip }: OkMessage = {}): Suc
   };
 };
 
-export const isErr = (input: unknown): input is Err =>
-  typeof input === 'object' && input !== null && 'type' in input;
+export const isErr = (input: unknown): input is Err => {
+  return typeof input === 'object' && input !== null && 'type' in input;
+};
 
 export const fail = <Error extends Err | undefined = never>(
   type: Error extends Err ? Error['type'] : undefined,
-  { message, code, order, skip, ...error }: ErrorMessage<Error> = {} as ErrorMessage<Error>
+  {
+    message, code, order, skip, ...error
+  }: ErrorMessage<Error> = {} as ErrorMessage<Error>,
 ): Failure<Error> => {
   const failure = ((typeof type !== 'undefined'
     ? {
-        ...error,
-        type,
-        message,
-      }
+      ...error,
+      type,
+      message,
+    }
     : undefined) as unknown) as Error;
 
   if (skip) {
@@ -108,7 +113,7 @@ export const fail = <Error extends Err | undefined = never>(
     failure,
     order,
     message,
-    code
+    code,
   );
 
   if (exception.code === undefined) {
@@ -130,7 +135,7 @@ export const fail = <Error extends Err | undefined = never>(
 
 export const compare = <Data1, Error1, Data2, Error2>(
   r1: Result<Data1, Error1>,
-  r2: Result<Data2, Error2>
+  r2: Result<Data2, Error2>,
 ): Result<Data1 | Data2, Error1 | Error2> => {
   if ((r1.order || 0) > (r2.order || 0)) {
     return r1;
@@ -149,5 +154,5 @@ export const compare = <Data1, Error1, Data2, Error2>(
 
 export function nope(p: never): never;
 export function nope(_p: unknown): never {
-  throw new Error(`Unreachable`);
+  throw new Error('Unreachable');
 }

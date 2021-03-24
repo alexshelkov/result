@@ -1,4 +1,6 @@
-import { Err, fail, Failure, ok, nope, Result } from '../index';
+import {
+  Err, fail, Failure, ok, nope, Result,
+} from '../index';
 
 interface E1 extends Err {
   type: 'e1';
@@ -73,32 +75,40 @@ describe('result', () => {
     expect(result.isOk()).toBe(true);
     expect(result.isErr()).toBe(false);
     expect(result.ok()).toStrictEqual('data');
-    expect(() => result.err()).toThrow("Can't access error on data");
+    expect(() => {
+      return result.err();
+    }).toThrow("Can't access error on data");
   });
 
   it('works when fail called with undefined', () => {
     expect.assertions(4);
 
+    // eslint-disable-next-line operator-linebreak
     const result: Result<string, undefined> =
       // eslint-disable-next-line jest/no-if
       Math.random() !== -1 ? fail(undefined) : ok('');
 
     expect(result.isOk()).toBe(false);
     expect(result.isErr()).toBe(true);
-    expect(() => result.ok()).toThrow("Can't access data on error");
+    expect(() => {
+      return result.ok();
+    }).toThrow("Can't access data on error");
     expect(result.err()).toBeUndefined();
   });
 
   it('returns error with err method', () => {
     expect.assertions(5);
 
+    // eslint-disable-next-line operator-linebreak
     const result: Result<string, E2> =
       // eslint-disable-next-line jest/no-if
       Math.random() !== -1 ? fail('e2', { stringAdded: 'e2data' }) : ok('');
 
     expect(result.isOk()).toBe(false);
     expect(result.isErr()).toBe(true);
-    expect(() => result.ok()).toThrow("Can't access data on error");
+    expect(() => {
+      return result.ok();
+    }).toThrow("Can't access data on error");
     expect(result.err().type).toStrictEqual('e2');
     expect(result.err().stringAdded).toStrictEqual('e2data');
   });
@@ -118,14 +128,14 @@ describe('result', () => {
 
     expect(
       // eslint-disable-next-line no-nested-ternary
-      result.isErr() ? (result.error.type === 'e2' ? result.error.stringAdded : null) : null
+      result.isErr() ? (result.error.type === 'e2' ? result.error.stringAdded : null) : null,
     ).toStrictEqual('e2data');
 
     result = fail<E3<number>>('e3', { numberAdded: 100 });
 
     expect(
       // eslint-disable-next-line no-nested-ternary
-      result.isErr() ? (result.error.type === 'e3' ? result.error.numberAdded : null) : null
+      result.isErr() ? (result.error.type === 'e3' ? result.error.numberAdded : null) : null,
     ).toStrictEqual(100);
   });
 

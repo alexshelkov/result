@@ -4,15 +4,21 @@ describe('to result', () => {
   it('not an object throws an error', () => {
     expect.assertions(2);
 
-    expect(() => toResult(null)).toThrow('Unexpected input');
+    expect(() => {
+      return toResult(null);
+    }).toThrow('Unexpected input');
 
-    expect(() => toResult('123')).toThrow('Unexpected input');
+    expect(() => {
+      return toResult('123');
+    }).toThrow('Unexpected input');
   });
 
   it('no status will throws an error', () => {
     expect.assertions(1);
 
-    expect(() => toResult({ data: 1 })).toThrow('Unexpected input');
+    expect(() => {
+      return toResult({ data: 1 });
+    }).toThrow('Unexpected input');
   });
 
   it('will cast to success', () => {
@@ -45,21 +51,29 @@ describe('to result', () => {
   it('will fail to unexpected status', () => {
     expect.assertions(1);
 
-    expect(() => toResult({ status: 'wrong', data: 1, error: { type: '' } })).toThrow(
-      'Unexpected input'
-    );
+    expect(() => {
+      return toResult({ status: 'wrong', data: 1, error: { type: '' } });
+    }).toThrow('Unexpected input');
   });
 
   it('will fail cast to error if no error', () => {
     expect.assertions(4);
 
-    expect(() => toResult({ status: 'error' })).toThrow('Unexpected input');
+    expect(() => {
+      return toResult({ status: 'error' });
+    }).toThrow('Unexpected input');
 
-    expect(() => toResult({ status: 'error', error: null })).toThrow('Unexpected input');
+    expect(() => {
+      return toResult({ status: 'error', error: null });
+    }).toThrow('Unexpected input');
 
-    expect(() => toResult({ status: 'error', error: 1 })).toThrow('Unexpected input');
+    expect(() => {
+      return toResult({ status: 'error', error: 1 });
+    }).toThrow('Unexpected input');
 
-    expect(() => toResult({ status: 'error', error: {} })).toThrow('Unexpected input');
+    expect(() => {
+      return toResult({ status: 'error', error: {} });
+    }).toThrow('Unexpected input');
   });
 
   it('handle success types', () => {

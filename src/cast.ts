@@ -1,4 +1,6 @@
-import { Err, Failure, Result, Success } from './types';
+import {
+  Err, Failure, Result, Success,
+} from './types';
 import { fail, ok } from './utils';
 
 const isHaveStatus = (input: unknown): input is { status: 'error' | 'success' } => {
@@ -27,19 +29,25 @@ export const isFailureLike = <Error extends Err>(input: unknown): input is Failu
   }
 
   // eslint-disable-next-line @typescript-eslint/ban-types
-  const isHaveError = (param: object): param is { error: unknown } => 'error' in param;
+  const isHaveError = (param: object): param is { error: unknown } => {
+    return 'error' in param;
+  };
 
   // eslint-disable-next-line @typescript-eslint/ban-types
-  const isError = (param: unknown): param is object => typeof param === 'object' && param !== null;
+  const isError = (param: unknown): param is object => {
+    return typeof param === 'object' && param !== null;
+  };
 
   // eslint-disable-next-line @typescript-eslint/ban-types
-  const isHaveType = (param: object): param is { type: unknown } => 'type' in param;
+  const isHaveType = (param: object): param is { type: unknown } => {
+    return 'type' in param;
+  };
 
   return (
-    isHaveError(input) &&
-    isError(input.error) &&
-    isHaveType(input.error) &&
-    typeof input.error.type === 'string'
+    isHaveError(input)
+    && isError(input.error)
+    && isHaveType(input.error)
+    && typeof input.error.type === 'string'
   );
 };
 

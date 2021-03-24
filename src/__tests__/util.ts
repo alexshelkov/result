@@ -1,4 +1,6 @@
-import { Err, Result, ok, fail, compare, nope } from '../index';
+import {
+  Err, Result, ok, fail, compare, nope,
+} from '../index';
 
 describe('util', () => {
   it('works with skip option', () => {
@@ -50,6 +52,8 @@ describe('util', () => {
   it('never will throw exception if called', () => {
     expect.assertions(1);
 
-    expect(() => nope(undefined as never)).toThrow('Unreachable');
+    expect(() => {
+      return nope(undefined as never);
+    }).toThrow('Unreachable');
   });
 });
