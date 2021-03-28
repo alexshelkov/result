@@ -32,7 +32,22 @@ export type Result<Data, Error> = Success<Data> | Failure<Error>;
 
 export type Response<Data, Error> = Promise<Result<Data, Error>>;
 
+export const ErrLevel = {
+  Emerg: 0,
+  Alert: 1,
+  Crit: 2,
+  Error: 3,
+  Warning: 4,
+  Notice: 5,
+  Info: 6,
+  Debug: 7,
+};
+
 export interface Err {
   type: string;
   message?: string;
+  level?: number;
+  retry?: boolean;
+  notify?: boolean;
+  fatal?: boolean;
 }

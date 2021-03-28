@@ -1,6 +1,4 @@
-import {
-  Err, fail, Failure, ok, nope, Result,
-} from '../index';
+import { Err, fail, Failure, ok, nope, Result, ErrLevel } from '../index';
 
 interface E1 extends Err {
   type: 'e1';
@@ -128,14 +126,14 @@ describe('result', () => {
 
     expect(
       // eslint-disable-next-line no-nested-ternary
-      result.isErr() ? (result.error.type === 'e2' ? result.error.stringAdded : null) : null,
+      result.isErr() ? (result.error.type === 'e2' ? result.error.stringAdded : null) : null
     ).toStrictEqual('e2data');
 
     result = fail<E3<number>>('e3', { numberAdded: 100 });
 
     expect(
       // eslint-disable-next-line no-nested-ternary
-      result.isErr() ? (result.error.type === 'e3' ? result.error.numberAdded : null) : null,
+      result.isErr() ? (result.error.type === 'e3' ? result.error.numberAdded : null) : null
     ).toStrictEqual(100);
   });
 
@@ -160,6 +158,24 @@ describe('result', () => {
     const err = fail<E1>('e1');
 
     expect(test1(err)).toStrictEqual(1);
+  });
+
+  it('different options passed correctly', () => {
+    expect.assertions(8);
+
+    const e1 = fail<E1>('e1', { fatal: true, level: ErrLevel.Crit });
+
+    expect(e1.err().fatal).toStrictEqual(true);
+    expect(e1.err().notify).toBeUndefined();
+    expect(e1.err().retry).toBeUndefined();
+    expect(e1.err().level).toStrictEqual(ErrLevel.Crit);
+
+    const e2 = fail<E1>('e1', { retry: true, notify: true });
+
+    expect(e2.err().fatal).toBeUndefined();
+    expect(e2.err().notify).toStrictEqual(true);
+    expect(e2.err().retry).toStrictEqual(true);
+    expect(e2.err().level).toBeUndefined();
   });
 
   it('type overwrite', () => {
