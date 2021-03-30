@@ -1,6 +1,4 @@
-import {
-  Success, Failure, Result, Err, PartialSuccess, PartialFailure,
-} from './types';
+import { Success, Failure, Result, Err, PartialSuccess, PartialFailure } from './types';
 
 export class FailureException<Fail> extends Error implements Failure<Fail> {
   status: 'error';
@@ -68,22 +66,38 @@ export const ok = <Data>(data: Data, { code, order, skip }: OkMessage = {}): Suc
     order,
   } as PartialSuccess<Data>;
 
-  return {
-    ...partial,
+  return Object.defineProperties(
+    {
+      ...partial,
 
-    isOk() {
-      return true;
+      isOk() {
+        return true;
+      },
+      isErr() {
+        return false;
+      },
+      ok() {
+        return (this as Success<Data>).data;
+      },
+      err(): never {
+        throw new Error("Can't access error on data");
+      },
     },
-    isErr() {
-      return false;
-    },
-    ok() {
-      return this.data;
-    },
-    err(): never {
-      throw new Error("Can't access error on data");
-    },
-  };
+    {
+      isOk: {
+        enumerable: false,
+      },
+      isErr: {
+        enumerable: false,
+      },
+      ok: {
+        enumerable: false,
+      },
+      err: {
+        enumerable: false,
+      },
+    }
+  ) as Success<Data>;
 };
 
 export const isErr = (input: unknown): input is Err => {
@@ -92,16 +106,14 @@ export const isErr = (input: unknown): input is Err => {
 
 export const fail = <Error extends Err | undefined = never>(
   type: Error extends Err ? Error['type'] : undefined,
-  {
-    message, code, order, skip, ...error
-  }: ErrorMessage<Error> = {} as ErrorMessage<Error>,
+  { message, code, order, skip, ...error }: ErrorMessage<Error> = {} as ErrorMessage<Error>
 ): Failure<Error> => {
   const failure = ((typeof type !== 'undefined'
     ? {
-      ...error,
-      type,
-      message,
-    }
+        ...error,
+        type,
+        message,
+      }
     : undefined) as unknown) as Error;
 
   if (skip) {
@@ -113,7 +125,7 @@ export const fail = <Error extends Err | undefined = never>(
     failure,
     order,
     message,
-    code,
+    code
   );
 
   if (exception.code === undefined) {
@@ -135,7 +147,7 @@ export const fail = <Error extends Err | undefined = never>(
 
 export const compare = <Data1, Error1, Data2, Error2>(
   r1: Result<Data1, Error1>,
-  r2: Result<Data2, Error2>,
+  r2: Result<Data2, Error2>
 ): Result<Data1 | Data2, Error1 | Error2> => {
   if ((r1.order || 0) > (r2.order || 0)) {
     return r1;
