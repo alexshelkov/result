@@ -90,7 +90,7 @@ describe('to result', () => {
   it('handle error types', () => {
     expect.assertions(2);
 
-    type E1 = { type: 'e1'; someErrorData: string } & Err;
+    type E1 = Err<'e1', { someErrorData: string }>;
 
     const result: Result<unknown, E1> = toResult({
       status: 'error',

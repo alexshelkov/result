@@ -43,11 +43,19 @@ export const ErrLevel = {
   Debug: 7,
 };
 
-export interface Err {
+export type Err = {
   type: string;
   message?: string;
   level?: number;
   retry?: boolean;
   notify?: boolean;
   fatal?: boolean;
-}
+};
+
+// eslint-disable-next-line @typescript-eslint/ban-types
+export type ErrUtil<T = unknown, A = {}> = T extends string
+  ? { [k in keyof ({ type: T } & A)]: ({ type: T } & A)[k] } & Err
+  : // eslint-disable-next-line @typescript-eslint/ban-types
+  T extends {}
+  ? { [k in keyof (T & A)]: (T & A)[k] } & Err
+  : Err;

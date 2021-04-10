@@ -1,13 +1,8 @@
 import { Err, fail, Failure, ok, nope, Result, ErrLevel } from '../index';
 
-interface E1 extends Err {
-  type: 'e1';
-}
+type E1 = Err<'e1'>;
 
-interface E2 extends Err {
-  type: 'e2';
-  stringAdded: 'e2data';
-}
+type E2 = Err<'e2', { stringAdded: 'e2data' }>;
 
 interface E3<T> extends Err {
   type: 'e3';

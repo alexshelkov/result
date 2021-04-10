@@ -1,4 +1,12 @@
-export { Success, Failure, Result, Response, Err, ErrLevel } from './types';
+export {
+  Success,
+  Failure,
+  Result,
+  Response,
+  ErrUtil as Err,
+  Err as ErrInfo,
+  ErrLevel,
+} from './types';
 
 export { ok, fail, compare, isErr, nope, FailureException } from './utils';
 
