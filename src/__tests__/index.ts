@@ -1,4 +1,4 @@
-import { Err, fail, Failure, ok, nope, Result, ErrLevel } from '../index';
+import { Err, Errs, Dis, Failure, Result, ErrLevel, ok, nope, fail } from '../index';
 
 type E1 = Err<'e1'>;
 
@@ -179,5 +179,55 @@ describe('result', () => {
     const err = fail<Err>('test1', { type: 'test2' } as Err);
 
     expect(err.error.type).toStrictEqual('test1');
+  });
+
+  it('works with errors groups', () => {
+    expect.assertions(3);
+
+    type Group1 = Errs<{
+      name: 'Errs';
+      Err1: string;
+      Err2: string;
+      Err3: {
+        addedString: string;
+      };
+    }>;
+
+    type Group1Errs = Dis<Group1>;
+
+    const err1 = fail<Group1['Err3']>('ErrsErr3', { addedString: 'str' });
+
+    expect(err1.err().type).toStrictEqual('ErrsErr3');
+
+    const err2 = fail<Group1Errs>('ErrsErr2');
+
+    const check = (err: Group1Errs) => {
+      if (err.type === 'ErrsErr1') {
+        return 1;
+      }
+      if (err.type === 'ErrsErr2') {
+        return 2;
+      }
+      if (err.type === 'ErrsErr3') {
+        return 3;
+      }
+
+      nope(err);
+
+      return 0;
+    };
+
+    expect(check(err2.err())).toStrictEqual(2);
+
+    type Group2 = Errs<{
+      Err4: string;
+      Err5: {
+        addedString: string;
+      };
+    }>;
+
+    const err3 = fail<Dis<Group2>>('Err4');
+
+    expect(err3.err().type).toStrictEqual('Err4');
   });
 });

@@ -59,3 +59,22 @@ export type ErrUtil<T = unknown, A = {}> = T extends string
   T extends {}
   ? { [k in keyof (T & A)]: (T & A)[k] } & Err
   : Err;
+
+// eslint-disable-next-line @typescript-eslint/ban-types
+export type Errs<Errors extends {}> = Omit<
+  {
+    [Type in keyof Errors]: ErrUtil<
+      Type extends string
+        ? Errors extends { name: string }
+          ? `${Errors['name']}${Type}`
+          : Type
+        : never,
+      // eslint-disable-next-line @typescript-eslint/ban-types
+      Errors[Type] extends string | null ? {} : Exclude<Errors[Type], 'type'>
+    >;
+  },
+  'name'
+>;
+
+// eslint-disable-next-line @typescript-eslint/ban-types
+export type Dis<Errors extends {}> = Errors[keyof Errors];

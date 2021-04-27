@@ -1,6 +1,4 @@
-import {
-  Err, Result, ok, fail, compare, nope,
-} from '../index';
+import { Err, Result, ok, fail, compare, nope } from '../index';
 
 describe('util', () => {
   it('works with skip option', () => {
