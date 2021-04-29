@@ -90,7 +90,7 @@ describe('result', () => {
   });
 
   it('returns error with err method', () => {
-    expect.assertions(5);
+    expect.assertions(6);
 
     // eslint-disable-next-line operator-linebreak
     const result: Result<string, E2> =
@@ -99,6 +99,7 @@ describe('result', () => {
 
     expect(result.isOk()).toBe(false);
     expect(result.isErr()).toBe(true);
+    expect(result.isErr('e2')).toBe(true);
     expect(() => {
       return result.ok();
     }).toThrow("Can't access data on error");
@@ -107,7 +108,7 @@ describe('result', () => {
   });
 
   it('fail will create typesafe errors', () => {
-    expect.assertions(4);
+    expect.assertions(7);
 
     let result: Result<string, AppErr> = ok('1');
 
@@ -119,17 +120,23 @@ describe('result', () => {
 
     result = fail<E2>('e2', { stringAdded: 'e2data' });
 
-    expect(
-      // eslint-disable-next-line no-nested-ternary
-      result.isErr() ? (result.error.type === 'e2' ? result.error.stringAdded : null) : null
-    ).toStrictEqual('e2data');
+    expect(result.isErr('e2') ? result.err().stringAdded : null).toStrictEqual('e2data');
 
     result = fail<E3<number>>('e3', { numberAdded: 100 });
 
-    expect(
-      // eslint-disable-next-line no-nested-ternary
-      result.isErr() ? (result.error.type === 'e3' ? result.error.numberAdded : null) : null
-    ).toStrictEqual(100);
+    expect(result.isErr('e3') ? result.error.numberAdded : null).toStrictEqual(100);
+
+    type E = E1 | E2 | E3<string>;
+
+    const result2 = Math.random() !== -1 ? fail<E>('e2') : ok('');
+
+    expect(result2.isErr('e1')).toStrictEqual(false);
+    expect(result2.isErr('e2')).toStrictEqual(true);
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-explicit-any
+    (result2 as any).error = '1';
+
+    expect(result2.isErr('e2')).toStrictEqual(false);
   });
 
   it('will check errors exhaustively', () => {
@@ -182,7 +189,7 @@ describe('result', () => {
   });
 
   it('works with errors groups', () => {
-    expect.assertions(3);
+    expect.assertions(4);
 
     type Group1 = Errs<{
       name: 'Errs';
@@ -222,12 +229,14 @@ describe('result', () => {
     type Group2 = Errs<{
       Err4: string;
       Err5: {
-        addedString: string;
+        addedNumber: number;
       };
+      Err6: string;
     }>;
 
-    const err3 = fail<Dis<Group2>>('Err4');
+    const err3 = fail<Dis<Group2>>('Err5', { addedNumber: 5 } as Group2['Err5']);
 
-    expect(err3.err().type).toStrictEqual('Err4');
+    expect(err3.err().type).toStrictEqual('Err5');
+    expect(err3.isErr('Err5') ? err3.err().addedNumber : undefined).toStrictEqual(5);
   });
 });

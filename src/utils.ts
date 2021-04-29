@@ -1,5 +1,9 @@
 import { Success, Failure, Result, Err, PartialSuccess, PartialFailure } from './types';
 
+export const isErr = (input: unknown): input is Err => {
+  return typeof input === 'object' && input !== null && 'type' in input;
+};
+
 export class FailureException<Fail> extends Error implements Failure<Fail> {
   status: 'error';
 
@@ -26,9 +30,12 @@ export class FailureException<Fail> extends Error implements Failure<Fail> {
     return false;
   }
 
-  // eslint-disable-next-line class-methods-use-this
-  isErr(): true {
-    return true;
+  isErr<Type>(type?: Type): boolean {
+    if (typeof type !== 'string') {
+      return true;
+    }
+
+    return isErr(this.error) ? ((this.error.type as unknown) as Type) === type : false;
   }
 
   // eslint-disable-next-line class-methods-use-this
@@ -98,10 +105,6 @@ export const ok = <Data>(data: Data, { code, order, skip }: OkMessage = {}): Suc
       },
     }
   ) as Success<Data>;
-};
-
-export const isErr = (input: unknown): input is Err => {
-  return typeof input === 'object' && input !== null && 'type' in input;
 };
 
 export const fail = <Error extends Err | undefined = never>(

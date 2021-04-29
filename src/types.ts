@@ -4,16 +4,6 @@ interface CompareResult {
   code?: number;
 }
 
-export interface ResultHelpers<Data, Fail> {
-  isOk(): this is PartialSuccess<Data>;
-
-  isErr(): this is PartialFailure<Fail>;
-
-  ok(): this extends PartialSuccess<Data> ? Data : never;
-
-  err(): this extends PartialFailure<Fail> ? Fail : never;
-}
-
 export interface PartialSuccess<Data> extends CompareResult {
   status: 'success';
   data: Data;
@@ -24,9 +14,24 @@ export interface PartialFailure<Fail> extends Error, CompareResult {
   error: Fail;
 }
 
-export interface Success<Data> extends PartialSuccess<Data>, ResultHelpers<Data, unknown> {}
+export interface Success<Data> extends PartialSuccess<Data> {
+  isOk(): this is PartialSuccess<Data>;
+  ok(): Data;
+  isErr(): false;
+  err(): never;
+}
 
-export interface Failure<Error> extends PartialFailure<Error>, ResultHelpers<unknown, Error> {}
+export interface Failure<Fail> extends PartialFailure<Fail> {
+  isOk(): false;
+  ok(): never;
+  isErr<
+    Type extends (Fail extends Err ? Fail['type'] : never) | undefined,
+    Error extends Fail extends { type: Type } ? Fail : never
+  >(
+    param?: Type
+  ): this is Type extends undefined ? PartialFailure<Fail> : Failure<Error>;
+  err(): Fail;
+}
 
 export type Result<Data, Error> = Success<Data> | Failure<Error>;
 
