@@ -4,6 +4,21 @@ export const isErr = (input: unknown): input is Err => {
   return typeof input === 'object' && input !== null && 'type' in input;
 };
 
+export const isErrType = <
+  Type extends string,
+  Fail,
+  Error extends Fail = Fail extends { type: Type } ? Fail : never
+>(
+  type: Type,
+  input: Fail
+): input is Error => {
+  if (isErr(input)) {
+    return input.type === type;
+  }
+
+  return false;
+};
+
 export class FailureException<Fail> extends Error implements Failure<Fail> {
   status: 'error';
 
@@ -30,12 +45,9 @@ export class FailureException<Fail> extends Error implements Failure<Fail> {
     return false;
   }
 
-  isErr<Type>(type?: Type): boolean {
-    if (typeof type !== 'string') {
-      return true;
-    }
-
-    return isErr(this.error) ? ((this.error.type as unknown) as Type) === type : false;
+  // eslint-disable-next-line class-methods-use-this
+  isErr(): true {
+    return true;
   }
 
   // eslint-disable-next-line class-methods-use-this
@@ -45,6 +57,26 @@ export class FailureException<Fail> extends Error implements Failure<Fail> {
 
   err(): this extends PartialFailure<Fail> ? Fail : never {
     return this.error as this extends PartialFailure<Fail> ? Fail : never;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  onOk(): never {
+    return undefined as never;
+  }
+
+  onAnyErr<Res>(cb: (err: Fail) => Res): Res {
+    return cb(this.error);
+  }
+
+  onErr<Type extends string, Res>(
+    type: Type,
+    cb: (err: Fail extends { type: Type } ? Fail : never) => Res
+  ): Res {
+    if (isErrType(type, this.error)) {
+      return cb(this.error);
+    }
+
+    return undefined as never;
   }
 }
 
@@ -84,12 +116,21 @@ export const ok = <Data>(data: Data, { code, order, skip }: OkMessage = {}): Suc
         return false;
       },
       ok() {
-        return (this as Success<Data>).data;
+        return this.data;
       },
       err(): never {
         throw new Error("Can't access error on data");
       },
-    },
+      onOk<Res>(cb: (data: Data) => Res): Res {
+        return cb(this.data);
+      },
+      onErr(): never {
+        return undefined as never;
+      },
+      onAnyErr(): never {
+        return undefined as never;
+      },
+    } as Success<Data>,
     {
       isOk: {
         enumerable: false,

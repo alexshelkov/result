@@ -1,6 +1,4 @@
-import {
-  Err, Failure, Result, Success,
-} from './types';
+import { Err, Failure, Result, Success } from './types';
 import { fail, ok } from './utils';
 
 const isHaveStatus = (input: unknown): input is { status: 'error' | 'success' } => {
@@ -44,10 +42,10 @@ export const isFailureLike = <Error extends Err>(input: unknown): input is Failu
   };
 
   return (
-    isHaveError(input)
-    && isError(input.error)
-    && isHaveType(input.error)
-    && typeof input.error.type === 'string'
+    isHaveError(input) &&
+    isError(input.error) &&
+    isHaveType(input.error) &&
+    typeof input.error.type === 'string'
   );
 };
 
@@ -55,6 +53,7 @@ export const toResult = <Data, Error extends Err>(input: unknown): Result<Data, 
   if (isOkLike<Data>(input)) {
     return ok(input.data);
   }
+
   if (isFailureLike<Error>(input)) {
     // should really not use never here
     return fail<Error>(input.error.type as never, input.error);

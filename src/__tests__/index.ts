@@ -1,4 +1,4 @@
-import { Err, Errs, Dis, Failure, Result, ErrLevel, ok, nope, fail } from '../index';
+import { Err, Errs, Success, Failure, Result, ErrLevel, ok, nope, fail } from '../index';
 
 type E1 = Err<'e1'>;
 
@@ -10,6 +10,12 @@ interface E3<T> extends Err {
 }
 
 type AppErr = E1 | E2 | E3<number>;
+
+type Expect<T extends true> = T;
+
+type Equal<X, Y> = (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2
+  ? true
+  : false;
 
 describe('result', () => {
   it('sets the code correctly', () => {
@@ -90,7 +96,7 @@ describe('result', () => {
   });
 
   it('returns error with err method', () => {
-    expect.assertions(6);
+    expect.assertions(5);
 
     // eslint-disable-next-line operator-linebreak
     const result: Result<string, E2> =
@@ -99,44 +105,11 @@ describe('result', () => {
 
     expect(result.isOk()).toBe(false);
     expect(result.isErr()).toBe(true);
-    expect(result.isErr('e2')).toBe(true);
     expect(() => {
       return result.ok();
     }).toThrow("Can't access data on error");
     expect(result.err().type).toStrictEqual('e2');
     expect(result.err().stringAdded).toStrictEqual('e2data');
-  });
-
-  it('fail will create typesafe errors', () => {
-    expect.assertions(7);
-
-    let result: Result<string, AppErr> = ok('1');
-
-    expect(result.ok()).toStrictEqual('1');
-
-    result = fail<E1>('e1');
-
-    expect(result.err().type).toStrictEqual('e1');
-
-    result = fail<E2>('e2', { stringAdded: 'e2data' });
-
-    expect(result.isErr('e2') ? result.err().stringAdded : null).toStrictEqual('e2data');
-
-    result = fail<E3<number>>('e3', { numberAdded: 100 });
-
-    expect(result.isErr('e3') ? result.error.numberAdded : null).toStrictEqual(100);
-
-    type E = E1 | E2 | E3<string>;
-
-    const result2 = Math.random() !== -1 ? fail<E>('e2') : ok('');
-
-    expect(result2.isErr('e1')).toStrictEqual(false);
-    expect(result2.isErr('e2')).toStrictEqual(true);
-
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-explicit-any
-    (result2 as any).error = '1';
-
-    expect(result2.isErr('e2')).toStrictEqual(false);
   });
 
   it('will check errors exhaustively', () => {
@@ -200,7 +173,7 @@ describe('result', () => {
       };
     }>;
 
-    type Group1Errs = Dis<Group1>;
+    type Group1Errs = Errs<Group1>;
 
     const err1 = fail<Group1['Err3']>('ErrsErr3', { addedString: 'str' });
 
@@ -234,9 +207,245 @@ describe('result', () => {
       Err6: string;
     }>;
 
-    const err3 = fail<Dis<Group2>>('Err5', { addedNumber: 5 } as Group2['Err5']);
+    const err3 = fail<Errs<Group2>>('Err5', { addedNumber: 5 } as Group2['Err5']);
 
     expect(err3.err().type).toStrictEqual('Err5');
-    expect(err3.isErr('Err5') ? err3.err().addedNumber : undefined).toStrictEqual(5);
+    expect(
+      // eslint-disable-next-line no-nested-ternary
+      err3.isErr() ? (err3.error.type === 'Err5' ? err3.error.addedNumber : undefined) : undefined
+    ).toStrictEqual(5);
+  });
+
+  describe('infer error based on its type', () => {
+    it('type inferred from common result', () => {
+      expect.assertions(4);
+
+      let r1: Result<string, AppErr> = ok('1');
+
+      expect.assertions(1);
+
+      expect(r1.ok()).toStrictEqual('1');
+
+      r1 = fail<E1>('e1');
+
+      expect(r1.err().type).toStrictEqual('e1');
+
+      r1 = fail<E2>('e2', { stringAdded: 'e2data' });
+
+      expect.assertions(4);
+
+      expect(
+        // eslint-disable-next-line no-nested-ternary
+        r1.isErr() ? (r1.error.type === 'e2' ? r1.error.stringAdded : null) : null
+      ).toStrictEqual('e2data');
+
+      r1 = fail<E3<number>>('e3', { numberAdded: 100 });
+
+      expect(
+        // eslint-disable-next-line no-nested-ternary
+        r1.isErr() ? (r1.error.type === 'e3' ? r1.error.numberAdded : null) : null
+      ).toStrictEqual(100);
+    });
+
+    it('types inferred from different fails and oks', () => {
+      expect.assertions(3);
+
+      // eslint-disable-next-line jest/no-if
+      const r1 = Math.random() !== -1 ? ok(1) : fail<Err<'e1' | 'e3'>>('e1');
+
+      expect(r1.ok()).toStrictEqual(1);
+
+      type R2 = Failure<Err<'e1' | 'e3'>> | Failure<E2> | Success<number>;
+
+      const e1 = fail<E2>('e2', { stringAdded: 'e2data' });
+      const r2 = Math.random() !== -1 ? e1 : r1;
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type ExpextedR2 = Expect<Equal<R2, typeof r2>>;
+
+      expect(r2.err().type).toStrictEqual('e2');
+
+      const r3 = Math.random() !== -1 ? r2 : r1;
+
+      expect(
+        // eslint-disable-next-line no-nested-ternary
+        r3.isErr() ? (r3.error.type === 'e2' ? r3.error.stringAdded : undefined) : undefined
+      ).toStrictEqual('e2data');
+    });
+  });
+});
+
+describe('result on methods', () => {
+  it('error is undefined', () => {
+    expect.assertions(2);
+
+    const err1 = fail<undefined>(undefined);
+
+    expect(
+      err1.onAnyErr((err) => {
+        return err;
+      })
+    ).toBeUndefined();
+
+    expect(
+      err1.onErr('Err', ({ type }) => {
+        const t: never = type;
+        return t;
+      })
+    ).toBeUndefined();
+  });
+
+  describe('errors types', () => {
+    type Group = Errs<{
+      name: null;
+      Err1: string;
+      Err2: {
+        addedString: string;
+      };
+      Err3: string;
+      Err4: string;
+    }>;
+
+    const err1 =
+      // eslint-disable-next-line jest/no-if
+      Math.random() !== -1
+        ? fail<Group['Err1'] | Group['Err2'] | Group['Err3']>('Err2', {
+            addedString: 'str',
+          } as Group['Err2'])
+        : ok('ok1');
+
+    it('err1', () => {
+      expect.assertions(6);
+
+      expect(err1.err().type).toStrictEqual('Err2');
+
+      expect(
+        err1.onAnyErr((err) => {
+          return err.type;
+        })
+      ).toStrictEqual('Err2');
+
+      expect(
+        err1.onErr('Err2', (err) => {
+          return err.type;
+        })
+      ).toStrictEqual('Err2');
+
+      expect(
+        err1.onErr('Err1', (err) => {
+          return err.type;
+        })
+      ).toBeUndefined();
+
+      expect(
+        err1.onErr('Err', (err) => {
+          const e: never = err;
+          return e;
+        })
+      ).toBeUndefined();
+
+      expect(
+        err1.onOk((data) => {
+          return data;
+        })
+      ).toBeUndefined();
+    });
+
+    const res1 = Math.random() !== -1 ? ok('ok2') : err1;
+
+    it('res1', () => {
+      expect.assertions(3);
+
+      expect(
+        res1.onOk((data) => {
+          return data;
+        })
+      ).toStrictEqual('ok2');
+
+      expect(
+        res1.onAnyErr(({ type }) => {
+          const t: 'Err1' | 'Err2' | 'Err3' = type;
+          return t;
+        })
+      ).toBeUndefined();
+
+      expect(
+        res1.onErr('Err1', ({ type }) => {
+          const t: 'Err1' = type;
+          return t;
+        })
+      ).toBeUndefined();
+    });
+
+    const res2: Result<string, Errs<Group>> =
+      Math.random() !== -1 ? fail<Group['Err4']>('Err4') : res1;
+
+    it('res2', () => {
+      expect.assertions(3);
+
+      expect(
+        res2.onOk((data) => {
+          return data;
+        })
+      ).toBeUndefined();
+
+      expect(
+        res2.onErr('Err4', (err) => {
+          return err.type;
+        })
+      ).toStrictEqual('Err4');
+
+      expect(
+        res2.onErr('Err', (err) => {
+          const e: never = err;
+          return e;
+        })
+      ).toBeUndefined();
+    });
+
+    const err2 =
+      Math.random() !== -1
+        ? fail<Errs<Group>>('Err2', { addedString: 'str' } as Group['Err2'])
+        : ok(undefined);
+
+    it('err2', () => {
+      expect.assertions(1);
+
+      expect(
+        err2.onErr('Err2', (err) => {
+          return err.addedString;
+        })
+      ).toStrictEqual('str');
+    });
+
+    const res3 = Math.random() !== -1 ? fail<Err<'e1'>>('e1') : fail<Err<'e2'>>('e2');
+
+    it('res3', () => {
+      expect.assertions(3);
+
+      expect(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        res3.onAnyErr((err: any) => {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+          return err;
+        })
+      ).toStrictEqual({ type: 'e1' });
+
+      expect(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        res3.onErr('e1', (err: any) => {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+          return err;
+        })
+      ).toStrictEqual({ type: 'e1' });
+
+      type Res3 = Failure<Err<'e1' | 'e2'>>;
+
+      expect(
+        (res3 as Res3).onErr('e1', (err) => {
+          return err.type;
+        })
+      ).toStrictEqual('e1');
+    });
   });
 });

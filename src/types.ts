@@ -15,27 +15,27 @@ export interface PartialFailure<Fail> extends Error, CompareResult {
 }
 
 export interface Success<Data> extends PartialSuccess<Data> {
-  isOk(): this is PartialSuccess<Data>;
   ok(): Data;
+  isOk(): this is Success<Data>;
+  onOk<Res>(cb: (data: Data) => Res): Res;
   isErr(): false;
   err(): never;
+  onAnyErr(cb: unknown): never;
+  onErr(type: unknown, cb: unknown): never;
 }
 
 export interface Failure<Fail> extends PartialFailure<Fail> {
+  onOk(): never;
   isOk(): false;
   ok(): never;
-  isErr<
-    Type extends (Fail extends Err ? Fail['type'] : never) | undefined,
-    Error extends Fail extends { type: Type } ? Fail : never
-  >(
-    param?: Type
-  ): this is Type extends undefined ? PartialFailure<Fail> : Failure<Error>;
+  isErr(): this is Failure<Fail>;
   err(): Fail;
+  onAnyErr<Res>(cb: (err: Fail) => Res): Res;
+  onErr<Type extends string, Res>(
+    type: Type,
+    cb: (err: Fail extends { type: Type } ? Fail : never) => Res
+  ): Res;
 }
-
-export type Result<Data, Error> = Success<Data> | Failure<Error>;
-
-export type Response<Data, Error> = Promise<Result<Data, Error>>;
 
 export const ErrLevel = {
   Emerg: 0,
@@ -65,21 +65,20 @@ export type ErrUtil<T = unknown, A = {}> = T extends string
   ? { [k in keyof (T & A)]: (T & A)[k] } & Err
   : Err;
 
-// eslint-disable-next-line @typescript-eslint/ban-types
-export type Errs<Errors extends {}> = Omit<
-  {
-    [Type in keyof Errors]: ErrUtil<
-      Type extends string
-        ? Errors extends { name: string }
-          ? `${Errors['name']}${Type}`
-          : Type
-        : never,
-      // eslint-disable-next-line @typescript-eslint/ban-types
-      Errors[Type] extends string | null ? {} : Exclude<Errors[Type], 'type'>
-    >;
-  },
-  'name'
->;
+export type Errs<Errors, Keys extends keyof Errors = keyof Errors> = Errors[Keys] extends Err
+  ? Errors[Keys]
+  : {
+      [Type in Exclude<keyof Errors, 'name'>]: ErrUtil<
+        Type extends string
+          ? Errors extends { name: string }
+            ? `${Errors['name']}${Type}`
+            : Type
+          : never,
+        // eslint-disable-next-line @typescript-eslint/ban-types
+        Errors[Type] extends string ? {} : Exclude<Errors[Type], 'type'>
+      >;
+    };
 
-// eslint-disable-next-line @typescript-eslint/ban-types
-export type Dis<Errors extends {}> = Errors[keyof Errors];
+export type Result<Data, Error> = Success<Data> | Failure<Error>;
+
+export type Response<Data, Error> = Promise<Result<Data, Error>>;
