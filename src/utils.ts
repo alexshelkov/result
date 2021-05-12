@@ -86,12 +86,14 @@ type OkMessage = {
   skip?: boolean;
 };
 
-type ErrorMessage<Error> = {
+type FailMessage = {
   code?: number;
   message?: string;
   order?: number;
   skip?: boolean;
-} & Omit<Error, 'type' | 'message'>;
+};
+
+type ErrorMessage<Error> = FailMessage & Omit<Error, 'type' | 'message'>;
 
 export const ok = <Data>(data: Data, { code, order, skip }: OkMessage = {}): Success<Data> => {
   if (skip) {
@@ -148,29 +150,25 @@ export const ok = <Data>(data: Data, { code, order, skip }: OkMessage = {}): Suc
   ) as Success<Data>;
 };
 
-export const fail = <Error extends Err | undefined = never>(
-  type: Error extends Err ? Error['type'] : undefined,
-  { message, code, order, skip, ...error }: ErrorMessage<Error> = {} as ErrorMessage<Error>
-): Failure<Error> => {
-  const failure = ((typeof type !== 'undefined'
-    ? {
-        ...error,
-        type,
-        message,
-      }
-    : undefined) as unknown) as Error;
-
+export const err = <Fail>(
+  failure: Fail,
+  { message, code, order, skip }: FailMessage = {}
+): Failure<Fail> => {
   if (skip) {
     order = -Infinity;
   }
 
-  const exception = new FailureException(
-    message || (type as string) || 'Unknown',
-    failure,
-    order,
-    message,
-    code
-  );
+  let type;
+
+  if (isErr(failure)) {
+    type = failure.type;
+  }
+
+  if (!type) {
+    type = message || 'Unknown';
+  }
+
+  const exception = new FailureException(type, failure, order, message, code);
 
   if (exception.code === undefined) {
     delete exception.code;
@@ -187,6 +185,21 @@ export const fail = <Error extends Err | undefined = never>(
   }
 
   return exception;
+};
+
+export const fail = <Error extends Err | undefined = never>(
+  type: Error extends Err ? Error['type'] : undefined,
+  { message, code, order, skip, ...error }: ErrorMessage<Error> = {} as ErrorMessage<Error>
+): Failure<Error> => {
+  const failure = ((typeof type !== 'undefined'
+    ? {
+        ...error,
+        type,
+        message,
+      }
+    : undefined) as unknown) as Error;
+
+  return err(failure, { message, code, order, skip });
 };
 
 export const compare = <Data1, Error1, Data2, Error2>(

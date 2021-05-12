@@ -65,8 +65,8 @@ export type ErrUtil<T = unknown, A = {}> = T extends string
   ? { [k in keyof (T & A)]: (T & A)[k] } & Err
   : Err;
 
-export type Errs<Errors, Keys extends keyof Errors = keyof Errors> = Errors[Keys] extends Err
-  ? Errors[Keys]
+export type Errs<Errors> = Errors[keyof Errors] extends Err
+  ? Errors[keyof Errors]
   : {
       [Type in Exclude<keyof Errors, 'name'>]: ErrUtil<
         Type extends string

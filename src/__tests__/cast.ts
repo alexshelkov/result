@@ -56,24 +56,16 @@ describe('to result', () => {
     }).toThrow('Unexpected input');
   });
 
-  it('will fail cast to error if no error', () => {
+  it('will cast to error if no error', () => {
     expect.assertions(4);
 
-    expect(() => {
-      return toResult({ status: 'error' });
-    }).toThrow('Unexpected input');
+    expect(toResult({ status: 'error' }).err()).toBeUndefined();
 
-    expect(() => {
-      return toResult({ status: 'error', error: null });
-    }).toThrow('Unexpected input');
+    expect(toResult({ status: 'error', error: null }).err()).toBeNull();
 
-    expect(() => {
-      return toResult({ status: 'error', error: 1 });
-    }).toThrow('Unexpected input');
+    expect(toResult({ status: 'error', error: 1 }).err()).toStrictEqual(1);
 
-    expect(() => {
-      return toResult({ status: 'error', error: {} });
-    }).toThrow('Unexpected input');
+    expect(toResult({ status: 'error', error: {} }).err()).toStrictEqual({});
   });
 
   it('handle success types', () => {
