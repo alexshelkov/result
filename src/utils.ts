@@ -1,4 +1,12 @@
-import { Success, Failure, Result, Err, PartialSuccess, PartialFailure } from './types';
+import {
+  Result,
+  PartialResult,
+  Err,
+  Success,
+  Failure,
+  PartialSuccess,
+  PartialFailure,
+} from './types';
 
 export const isErr = (input: unknown): input is Err => {
   return typeof input === 'object' && input !== null && 'type' in input;
@@ -19,7 +27,7 @@ export const isErrType = <
   return false;
 };
 
-export class FailureException<Fail> extends Error implements Failure<Fail> {
+export class FailureException<Fail> extends Error implements PartialFailure<Fail> {
   status: 'error';
 
   error: Fail;
@@ -39,45 +47,6 @@ export class FailureException<Fail> extends Error implements Failure<Fail> {
     this.code = c;
     this.name = 'FailureException';
   }
-
-  // eslint-disable-next-line class-methods-use-this
-  isOk(): false {
-    return false;
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  isErr(): true {
-    return true;
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  ok(): never {
-    throw new Error("Can't access data on error");
-  }
-
-  err(): this extends PartialFailure<Fail> ? Fail : never {
-    return this.error as this extends PartialFailure<Fail> ? Fail : never;
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  onOk(): never {
-    return undefined as never;
-  }
-
-  onAnyErr<Res>(cb: (err: Fail) => Res): Res {
-    return cb(this.error);
-  }
-
-  onErr<Type extends string, Res>(
-    type: Type,
-    cb: (err: Fail extends { type: Type } ? Fail : never) => Res
-  ): Res {
-    if (isErrType(type, this.error)) {
-      return cb(this.error);
-    }
-
-    return undefined as never;
-  }
 }
 
 type OkMessage = {
@@ -95,7 +64,55 @@ type FailMessage = {
 
 type ErrorMessage<Error> = FailMessage & Omit<Error, 'type' | 'message'>;
 
-export const ok = <Data>(data: Data, { code, order, skip }: OkMessage = {}): Success<Data> => {
+export const complete = <Data, Fail>(partial: PartialResult<Data, Fail>): Result<Data, Fail> => {
+  const propsDefs = {
+    isOk: {
+      enumerable: false,
+    },
+    isErr: {
+      enumerable: false,
+    },
+    ok: {
+      enumerable: false,
+    },
+    err: {
+      enumerable: false,
+    },
+  };
+
+  const result = partial as Result<Data, Fail>;
+
+  result.isOk = () => {
+    return result.status === 'success';
+  };
+
+  result.isErr = () => {
+    return result.status === 'error';
+  };
+
+  result.ok = () => {
+    if (result.status === 'success') {
+      return result.data;
+    }
+
+    throw new Error("Can't access data on error");
+  };
+
+  result.err = () => {
+    if (result.status === 'error') {
+      return result.error;
+    }
+
+    throw new Error("Can't access error on data");
+  };
+
+  return Object.defineProperties(result, propsDefs) as Result<Data, Fail>;
+};
+
+export const ok = <Data = never>(
+  data: Data,
+  { code, order, skip }: OkMessage = {}
+): Success<Data> => {
   if (skip) {
     order = -Infinity;
   }
@@ -107,50 +124,10 @@ export const ok = <Data>(data: Data, { code, order, skip }: OkMessage = {}): Suc
     order,
   } as PartialSuccess<Data>;
 
-  return Object.defineProperties(
-    {
-      ...partial,
-
-      isOk() {
-        return true;
-      },
-      isErr() {
-        return false;
-      },
-      ok() {
-        return this.data;
-      },
-      err(): never {
-        throw new Error("Can't access error on data");
-      },
-      onOk<Res>(cb: (data: Data) => Res): Res {
-        return cb(this.data);
-      },
-      onErr(): never {
-        return undefined as never;
-      },
-      onAnyErr(): never {
-        return undefined as never;
-      },
-    } as Success<Data>,
-    {
-      isOk: {
-        enumerable: false,
-      },
-      isErr: {
-        enumerable: false,
-      },
-      ok: {
-        enumerable: false,
-      },
-      err: {
-        enumerable: false,
-      },
-    }
-  ) as Success<Data>;
+  return complete(partial) as Success<Data>;
 };
 
-export const err = <Fail>(
+export const err = <Fail = never>(
   failure: Fail,
   { message, code, order, skip }: FailMessage = {}
 ): Failure<Fail> => {
@@ -184,7 +161,7 @@ export const err = <Fail>(
     }
   }
 
-  return exception;
+  return complete(exception) as Failure<Fail>;
 };
 
 export const fail = <Error extends Err | undefined = never>(

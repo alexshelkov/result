@@ -17,24 +17,15 @@ export interface PartialFailure<Fail> extends Error, CompareResult {
 export interface Success<Data> extends PartialSuccess<Data> {
   ok(): Data;
   isOk(): this is Success<Data>;
-  onOk<Res>(cb: (data: Data) => Res): Res;
   isErr(): false;
   err(): never;
-  onAnyErr(cb: unknown): never;
-  onErr(type: unknown, cb: unknown): never;
 }
 
 export interface Failure<Fail> extends PartialFailure<Fail> {
-  onOk(): never;
   isOk(): false;
   ok(): never;
   isErr(): this is Failure<Fail>;
   err(): Fail;
-  onAnyErr<Res>(cb: (err: Fail) => Res): Res;
-  onErr<Type extends string, Res>(
-    type: Type,
-    cb: (err: Fail extends { type: Type } ? Fail : never) => Res
-  ): Res;
 }
 
 export const ErrLevel = {
@@ -79,6 +70,8 @@ export type Errs<Errors> = Errors[keyof Errors] extends Err
       >;
     };
 
-export type Result<Data, Error> = Success<Data> | Failure<Error>;
+export type PartialResult<Data, Fail> = PartialSuccess<Data> | PartialFailure<Fail>;
 
-export type Response<Data, Error> = Promise<Result<Data, Error>>;
+export type Result<Data, Fail> = Success<Data> | Failure<Fail>; // & Transform<Data, Fail>;
+
+export type Response<Data, Fail> = Promise<Result<Data, Fail>>;

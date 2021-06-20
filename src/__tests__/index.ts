@@ -1,4 +1,16 @@
-import { Err, Errs, Success, Failure, Result, ErrLevel, ok, nope, fail } from '../index';
+import {
+  Err,
+  Errs,
+  Success,
+  Failure,
+  Result,
+  ErrLevel,
+  ok,
+  nope,
+  fail,
+  isErr,
+  isErrType,
+} from '../index';
 
 type E1 = Err<'e1'>;
 
@@ -275,177 +287,38 @@ describe('result', () => {
   });
 });
 
-describe('result on methods', () => {
-  it('error is undefined', () => {
-    expect.assertions(2);
+describe('error utils', () => {
+  it('is an error', () => {
+    expect.assertions(3);
 
-    const err1 = fail<undefined>(undefined);
+    expect(isErr({ type: 'test' })).toBeTruthy();
 
-    expect(
-      err1.onAnyErr((err) => {
-        return err;
-      })
-    ).toBeUndefined();
+    expect(isErr({})).toBeFalsy();
 
-    expect(
-      err1.onErr('Err', ({ type }) => {
-        const t: never = type;
-        return t;
-      })
-    ).toBeUndefined();
+    expect(isErr(null)).toBeFalsy();
   });
 
-  describe('errors types', () => {
-    type Group = Errs<{
-      name: null;
-      Err1: string;
-      Err2: {
-        addedString: string;
-      };
-      Err3: string;
-      Err4: string;
-    }>;
+  it('is an error of type', () => {
+    expect.assertions(2);
 
-    const err1 =
-      // eslint-disable-next-line jest/no-if
-      Math.random() !== -1
-        ? fail<Group['Err1'] | Group['Err2'] | Group['Err3']>('Err2', {
-            addedString: 'str',
-          } as Group['Err2'])
-        : ok('ok1');
+    const o1 = { type: 'test' as const };
 
-    it('err1', () => {
-      expect.assertions(6);
+    // eslint-disable-next-line jest/no-if
+    if (isErrType('test', o1)) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+      o1 as { type: 'test' };
+      // eslint-disable-next-line jest/no-conditional-expect
+      expect(o1.type).toStrictEqual('test');
+    }
 
-      expect(err1.err().type).toStrictEqual('Err2');
+    // eslint-disable-next-line jest/no-if
+    if (isErrType('test2', o1)) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+      o1 as never;
+      // eslint-disable-next-line jest/no-conditional-expect
+      expect(o1).toBeFalsy(); // this must be unreachable
+    }
 
-      expect(
-        err1.onAnyErr((err) => {
-          return err.type;
-        })
-      ).toStrictEqual('Err2');
-
-      expect(
-        err1.onErr('Err2', (err) => {
-          return err.type;
-        })
-      ).toStrictEqual('Err2');
-
-      expect(
-        err1.onErr('Err1', (err) => {
-          return err.type;
-        })
-      ).toBeUndefined();
-
-      expect(
-        err1.onErr('Err', (err) => {
-          const e: never = err;
-          return e;
-        })
-      ).toBeUndefined();
-
-      expect(
-        err1.onOk((data) => {
-          return data;
-        })
-      ).toBeUndefined();
-    });
-
-    const res1 = Math.random() !== -1 ? ok('ok2') : err1;
-
-    it('res1', () => {
-      expect.assertions(3);
-
-      expect(
-        res1.onOk((data) => {
-          return data;
-        })
-      ).toStrictEqual('ok2');
-
-      expect(
-        res1.onAnyErr(({ type }) => {
-          const t: 'Err1' | 'Err2' | 'Err3' = type;
-          return t;
-        })
-      ).toBeUndefined();
-
-      expect(
-        res1.onErr('Err1', ({ type }) => {
-          const t: 'Err1' = type;
-          return t;
-        })
-      ).toBeUndefined();
-    });
-
-    const res2: Result<string, Errs<Group>> =
-      Math.random() !== -1 ? fail<Group['Err4']>('Err4') : res1;
-
-    it('res2', () => {
-      expect.assertions(3);
-
-      expect(
-        res2.onOk((data) => {
-          return data;
-        })
-      ).toBeUndefined();
-
-      expect(
-        res2.onErr('Err4', (err) => {
-          return err.type;
-        })
-      ).toStrictEqual('Err4');
-
-      expect(
-        res2.onErr('Err', (err) => {
-          const e: never = err;
-          return e;
-        })
-      ).toBeUndefined();
-    });
-
-    const err2 =
-      Math.random() !== -1
-        ? fail<Errs<Group>>('Err2', { addedString: 'str' } as Group['Err2'])
-        : ok(undefined);
-
-    it('err2', () => {
-      expect.assertions(1);
-
-      expect(
-        err2.onErr('Err2', (err) => {
-          return err.addedString;
-        })
-      ).toStrictEqual('str');
-    });
-
-    const res3 = Math.random() !== -1 ? fail<Err<'e1'>>('e1') : fail<Err<'e2'>>('e2');
-
-    it('res3', () => {
-      expect.assertions(3);
-
-      expect(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        res3.onAnyErr((err: any) => {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-          return err;
-        })
-      ).toStrictEqual({ type: 'e1' });
-
-      expect(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        res3.onErr('e1', (err: any) => {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-          return err;
-        })
-      ).toStrictEqual({ type: 'e1' });
-
-      type Res3 = Failure<Err<'e1' | 'e2'>>;
-
-      expect(
-        (res3 as Res3).onErr('e1', (err) => {
-          return err.type;
-        })
-      ).toStrictEqual('e1');
-    });
+    expect(isErrType('test', {})).toBeFalsy();
   });
 });
