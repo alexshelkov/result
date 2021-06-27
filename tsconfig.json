@@ -21,5 +21,5 @@
     ".vscode/**/*",
     "dist"
   ],
-  "include": ["./**/*.ts"],
+  "include": ["./**/*.ts"]
 }

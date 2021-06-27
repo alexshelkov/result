@@ -16,6 +16,10 @@
     }
   },
   "lint-staged": {
+    "*.md": [
+      "typescript-docs-verifier",
+      "git add"
+    ],
     "*.{js,ts}": [
       "prettier --write",
       "eslint --fix --rule 'tsc/config: [2, {configFile: \"tsconfig.json\"}]'",
@@ -23,9 +27,11 @@
     ]
   },
   "scripts": {
+    "pretty": "prettier --write src/**",
     "check": "tsc --noEmit && eslint --fix src",
+    "docs": "typescript-docs-verifier",
     "build": "tsc -b",
-    "test": "jest --coverage --collectCoverageFrom=src/**",
+    "test": "jest --coverage --collectCoverageFrom=src/** --collectCoverageFrom=!**/__stubs__/**",
     "prepublishOnly": "rm -rf dist && npm run build"
   },
   "devDependencies": {
@@ -47,6 +53,7 @@
     "prettier": "^2.2.1",
     "ts-jest": "^26.5.4",
     "typescript": "^4.2.3",
-    "eslint-plugin-tsc": "^2.0.0"
+    "eslint-plugin-tsc": "^2.0.0",
+    "typescript-docs-verifier": "^1.1.3"
   }
 }

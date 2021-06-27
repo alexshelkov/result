@@ -8,6 +8,7 @@ import {
   ok,
   nope,
   fail,
+  err,
   isErr,
   isErrType,
 } from '../index';
@@ -63,7 +64,7 @@ describe('result', () => {
     expect(result.message).toStrictEqual('Unknown');
     expect(result.err().message).toBeUndefined();
 
-    const result2: Result<string, undefined> = fail<undefined>(undefined);
+    const result2: Result<string, undefined> = err(undefined);
 
     expect(result2.message).toStrictEqual('Unknown');
   });
@@ -97,7 +98,7 @@ describe('result', () => {
     // eslint-disable-next-line operator-linebreak
     const result: Result<string, undefined> =
       // eslint-disable-next-line jest/no-if
-      Math.random() !== -1 ? fail(undefined) : ok('');
+      Math.random() !== -1 ? err(undefined) : ok('');
 
     expect(result.isOk()).toBe(false);
     expect(result.isErr()).toBe(true);
@@ -113,7 +114,7 @@ describe('result', () => {
     // eslint-disable-next-line operator-linebreak
     const result: Result<string, E2> =
       // eslint-disable-next-line jest/no-if
-      Math.random() !== -1 ? fail('e2', { stringAdded: 'e2data' }) : ok('');
+      Math.random() !== -1 ? fail<E2>('e2', { stringAdded: 'e2data' }) : ok('');
 
     expect(result.isOk()).toBe(false);
     expect(result.isErr()).toBe(true);
@@ -142,9 +143,9 @@ describe('result', () => {
       }
     };
 
-    const err = fail<E1>('e1');
+    const e1 = fail<E1>('e1');
 
-    expect(test1(err)).toStrictEqual(1);
+    expect(test1(e1)).toStrictEqual(1);
   });
 
   it('different options passed correctly', () => {
@@ -168,9 +169,9 @@ describe('result', () => {
   it('type overwrite', () => {
     expect.assertions(1);
 
-    const err = fail<Err>('test1', { type: 'test2' } as Err);
+    const e1 = fail<Err>('test1', { type: 'test2' } as Err);
 
-    expect(err.error.type).toStrictEqual('test1');
+    expect(e1.err().type).toStrictEqual('test1');
   });
 
   it('works with errors groups', () => {
@@ -193,18 +194,18 @@ describe('result', () => {
 
     const err2 = fail<Group1Errs>('ErrsErr2');
 
-    const check = (err: Group1Errs) => {
-      if (err.type === 'ErrsErr1') {
+    const check = (e: Group1Errs) => {
+      if (e.type === 'ErrsErr1') {
         return 1;
       }
-      if (err.type === 'ErrsErr2') {
+      if (e.type === 'ErrsErr2') {
         return 2;
       }
-      if (err.type === 'ErrsErr3') {
+      if (e.type === 'ErrsErr3') {
         return 3;
       }
 
-      nope(err);
+      nope(e);
 
       return 0;
     };

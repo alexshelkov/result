@@ -6,6 +6,8 @@ import {
   Failure,
   PartialSuccess,
   PartialFailure,
+  Transform,
+  Response,
 } from './types';
 
 export const isErr = (input: unknown): input is Err => {
@@ -78,7 +80,21 @@ export const complete = <Data, Fail>(partial: PartialResult<Data, Fail>): Result
     err: {
       enumerable: false,
     },
+    onOk: {
+      enumerable: false,
+    },
+    onErr: {
+      enumerable: false,
+    },
   };
+
+  if (partial.order === undefined) {
+    delete partial.order;
+  }
+
+  if (partial.code === undefined) {
+    delete partial.code;
+  }
 
   const result = partial as Result<Data, Fail>;
 
@@ -104,6 +120,30 @@ export const complete = <Data, Fail>(partial: PartialResult<Data, Fail>): Result
     }
 
     throw new Error("Can't access error on data");
+  };
+
+  (result as Transform<Data, Fail>).onOk = async <Data2, Fail2>(
+    cb: (data: Data) => Response<Data2, Fail2>
+  ): Response<Data2, Fail | Fail2> => {
+    if (result.status === 'error') {
+      return (result as unknown) as Result<Data2, Fail>;
+    }
+
+    const data = await cb(result.data);
+
+    return complete(data);
+  };
+
+  (result as Transform<Data, Fail>).onErr = async <Fail2>(
+    cb: (err: Fail) => Promise<Failure<Fail2>>
+  ): Response<Data, Fail2> => {
+    if (result.status === 'success') {
+      return (result as unknown) as Result<Data, Fail2>;
+    }
+
+    const error = await cb(result.error);
+
+    return complete(error);
   };
 
   return Object.defineProperties(result, propsDefs) as Result<Data, Fail>;
@@ -147,14 +187,6 @@ export const err = <Fail = never>(
 
   const exception = new FailureException(type, failure, order, message, code);
 
-  if (exception.code === undefined) {
-    delete exception.code;
-  }
-
-  if (exception.order === undefined) {
-    delete exception.order;
-  }
-
   if (isErr(exception.error)) {
     if (exception.error.message === undefined) {
       delete exception.error.message;
@@ -164,17 +196,15 @@ export const err = <Fail = never>(
   return complete(exception) as Failure<Fail>;
 };
 
-export const fail = <Error extends Err | undefined = never>(
-  type: Error extends Err ? Error['type'] : undefined,
-  { message, code, order, skip, ...error }: ErrorMessage<Error> = {} as ErrorMessage<Error>
-): Failure<Error> => {
-  const failure = ((typeof type !== 'undefined'
-    ? {
-        ...error,
-        type,
-        message,
-      }
-    : undefined) as unknown) as Error;
+export const fail = <Fail extends Err | undefined = never>(
+  type: Fail extends Err ? Fail['type'] : undefined,
+  { message, code, order, skip, ...error }: ErrorMessage<Fail> = {} as ErrorMessage<Fail>
+): Failure<Fail> => {
+  const failure = ({
+    ...error,
+    type,
+    message,
+  } as unknown) as Fail;
 
   return err(failure, { message, code, order, skip });
 };

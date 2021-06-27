@@ -1,4 +1,4 @@
-import { Err, Result, ok, fail, compare, nope } from '../index';
+import { Err, Result, ok, fail, err, compare, nope } from '../index';
 
 describe('util', () => {
   it('works with skip option', () => {
@@ -42,9 +42,9 @@ describe('util', () => {
   it('undefined error type must not have error object', () => {
     expect.assertions(1);
 
-    const r: Result<never, undefined> = fail<undefined>(undefined);
+    const r: Result<never, undefined> = err(undefined);
 
-    expect(r.error).toBeUndefined();
+    expect(r.err()).toBeUndefined();
   });
 
   it('never will throw exception if called', () => {
