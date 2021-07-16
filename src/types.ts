@@ -7,6 +7,8 @@ interface CompareResult {
 export interface PartialSuccess<Data> extends CompareResult {
   status: 'success';
   data: Data;
+  message: never;
+  stack: never;
 }
 
 export interface PartialFailure<Fail> extends Error, CompareResult {
@@ -34,7 +36,7 @@ export interface Failure<Fail> extends PartialFailure<Fail> {
 
 export interface Transform<Data, Fail> {
   onOk<Data2, Fail2>(cb: (data: Data) => Response<Data2, Fail2>): Response<Data2, Fail | Fail2>;
-  onErr<Fail2>(cb: (err: Fail) => Promise<Failure<Fail2>>): Response<Data, Fail2>;
+  onErr<Fail2>(cb: (err: Fail) => Promise<Result<never, Fail2>>): Response<Data, Fail2>;
 }
 
 export const ErrLevel = {
@@ -83,8 +85,10 @@ export type Errs<Errors> = Errors[keyof Errors] extends Err
 
 export type PartialResult<Data, Fail> = PartialSuccess<Data> | PartialFailure<Fail>;
 
-export type Result<Data, Fail> =
-  | (Success<Data> & Transform<Data, Fail>)
-  | (Failure<Fail> & Transform<Data, Fail>);
+export type Result<Data, Fail> = (
+  | (Data | true extends true ? never : Success<Data>)
+  | (Fail | true extends true ? never : Failure<Fail>)
+) &
+  Transform<Data, Fail>;
 
 export type Response<Data, Fail> = Promise<Result<Data, Fail>>;

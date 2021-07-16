@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-types */
 
-import { Err } from '../index';
+import { Err, isErr, isErrType } from '../index';
 
 type TestErr<T, A = {}> = {
   type: T;
@@ -11,7 +11,7 @@ type TestErr<T, A = {}> = {
   fatal?: boolean;
 } & A;
 
-describe('error utils', () => {
+describe('error type', () => {
   it('string as type', () => {
     expect.assertions(1);
 
@@ -56,5 +56,41 @@ describe('error utils', () => {
     } as Err<{ type: 'e1'; test1: number }, { test2: string }>;
 
     expect(e1.type).toStrictEqual('e1');
+  });
+});
+
+describe('error utils', () => {
+  it('is an error', () => {
+    expect.assertions(3);
+
+    expect(isErr({ type: 'test' })).toBeTruthy();
+
+    expect(isErr({})).toBeFalsy();
+
+    expect(isErr(null)).toBeFalsy();
+  });
+
+  it('is an error of type', () => {
+    expect.assertions(2);
+
+    const o1 = { type: 'test' as const };
+
+    // eslint-disable-next-line jest/no-if
+    if (isErrType('test', o1)) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+      o1 as { type: 'test' };
+      // eslint-disable-next-line jest/no-conditional-expect
+      expect(o1.type).toStrictEqual('test');
+    }
+
+    // eslint-disable-next-line jest/no-if
+    if (isErrType('test2', o1)) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+      o1 as never;
+      // eslint-disable-next-line jest/no-conditional-expect
+      expect(o1).toBeFalsy(); // this must be unreachable
+    }
+
+    expect(isErrType('test', {})).toBeFalsy();
   });
 });

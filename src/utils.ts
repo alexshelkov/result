@@ -149,10 +149,10 @@ export const complete = <Data, Fail>(partial: PartialResult<Data, Fail>): Result
   return Object.defineProperties(result, propsDefs) as Result<Data, Fail>;
 };
 
-export const ok = <Data = never>(
+export const ok = <Data = never, Fail = never>(
   data: Data,
   { code, order, skip }: OkMessage = {}
-): Success<Data> => {
+): Result<Data, Fail> => {
   if (skip) {
     order = -Infinity;
   }
@@ -196,10 +196,10 @@ export const err = <Fail = never>(
   return complete(exception) as Failure<Fail>;
 };
 
-export const fail = <Fail extends Err | undefined = never>(
+export const fail = <Fail extends Err | undefined = never, Data = never>(
   type: Fail extends Err ? Fail['type'] : undefined,
   { message, code, order, skip, ...error }: ErrorMessage<Fail> = {} as ErrorMessage<Fail>
-): Failure<Fail> => {
+): Result<Data, Fail> => {
   const failure = ({
     ...error,
     type,

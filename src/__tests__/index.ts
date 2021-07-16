@@ -1,17 +1,4 @@
-import {
-  Err,
-  Errs,
-  Success,
-  Failure,
-  Result,
-  ErrLevel,
-  ok,
-  nope,
-  fail,
-  err,
-  isErr,
-  isErrType,
-} from '../index';
+import { Err, Errs, Result, ErrLevel, ok, nope, fail, err, Failure, Success } from '../index';
 
 type E1 = Err<'e1'>;
 
@@ -24,11 +11,76 @@ interface E3<T> extends Err {
 
 type AppErr = E1 | E2 | E3<number>;
 
-type Expect<T extends true> = T;
+type Assert<A extends boolean, T extends A> = T;
 
 type Equal<X, Y> = (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2
   ? true
   : false;
+
+describe('result and success/failure types compatability', () => {
+  it('success assignable to result', () => {
+    expect.assertions(2);
+
+    const r1: Success<string> = ok('ok1');
+
+    expect(r1.ok()).toStrictEqual('ok1');
+
+    const r2: Result<string, never> = ({ status: 'ok', data: 'ok2' } as unknown) as Success<string>;
+
+    expect(r2.data).toStrictEqual('ok2');
+  });
+
+  it('failure assignable to result', () => {
+    expect.assertions(2);
+
+    const r1: Failure<AppErr> = fail<E1>('e1');
+
+    expect(r1.err().type).toStrictEqual('e1');
+
+    const r2: Result<never, E1> = ({
+      status: 'error',
+      error: { type: 'e1' },
+    } as unknown) as Failure<E1>;
+
+    expect(r2.error.type).toStrictEqual('e1');
+  });
+
+  it('narrowing success type', () => {
+    expect.assertions(0);
+
+    const r1 = ok('ok1');
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    type ExpectedR1 = Assert<false, Equal<Success<string>, typeof r1>>;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    type ExpectedR2 = Assert<true, Equal<Result<string, never>, typeof r1>>;
+
+    if (r1.isOk()) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type ExpectedR3 = Assert<true, Equal<Success<string>, typeof r1>>;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type ExpectedR4 = Assert<false, Equal<Result<string, never>, typeof r1>>;
+    }
+  });
+
+  it('narrowing error type', () => {
+    expect.assertions(0);
+
+    const r1 = fail<E1>('e1');
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    type ExpectedR1 = Assert<false, Equal<Failure<E1>, typeof r1>>;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    type ExpectedR2 = Assert<true, Equal<Result<never, E1>, typeof r1>>;
+
+    if (r1.isErr()) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type ExpectedR3 = Assert<true, Equal<Failure<E1>, typeof r1>>;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type ExpectedR4 = Assert<false, Equal<Result<never, E1>, typeof r1>>;
+    }
+  });
+});
 
 describe('result', () => {
   it('sets the code correctly', () => {
@@ -50,7 +102,7 @@ describe('result', () => {
   it('sets the message correctly', () => {
     expect.assertions(2);
 
-    const result: Result<string, Err> = fail('', { message: 'Some error' });
+    const result: Result<string, Err<'e1'>> = fail('e1', { message: 'Some error' });
 
     expect(result.message).toStrictEqual('Some error');
     expect(result.err().message).toStrictEqual('Some error');
@@ -128,8 +180,11 @@ describe('result', () => {
   it('will check errors exhaustively', () => {
     expect.assertions(1);
 
-    const test1 = (e: Failure<AppErr>) => {
-      switch (e.error.type) {
+    const test1 = (r: Result<never, AppErr>) => {
+      const e = r.err();
+
+      // eslint-disable-next-line jest/no-if
+      switch (e.type) {
         case 'e1':
           return 1;
         case 'e2':
@@ -137,7 +192,7 @@ describe('result', () => {
         case 'e3':
           return 3;
         default:
-          nope(e.error);
+          nope(e);
 
           return 0;
       }
@@ -268,13 +323,13 @@ describe('result', () => {
 
       expect(r1.ok()).toStrictEqual(1);
 
-      type R2 = Failure<Err<'e1' | 'e3'>> | Failure<E2> | Success<number>;
+      type R2 = Result<never, Err<'e1' | 'e3'>> | Result<never, E2> | Result<number, never>;
 
       const e1 = fail<E2>('e2', { stringAdded: 'e2data' });
       const r2 = Math.random() !== -1 ? e1 : r1;
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      type ExpextedR2 = Expect<Equal<R2, typeof r2>>;
+      type ExpextedR2 = Assert<true, Equal<R2, typeof r2>>;
 
       expect(r2.err().type).toStrictEqual('e2');
 
@@ -285,41 +340,5 @@ describe('result', () => {
         r3.isErr() ? (r3.error.type === 'e2' ? r3.error.stringAdded : undefined) : undefined
       ).toStrictEqual('e2data');
     });
-  });
-});
-
-describe('error utils', () => {
-  it('is an error', () => {
-    expect.assertions(3);
-
-    expect(isErr({ type: 'test' })).toBeTruthy();
-
-    expect(isErr({})).toBeFalsy();
-
-    expect(isErr(null)).toBeFalsy();
-  });
-
-  it('is an error of type', () => {
-    expect.assertions(2);
-
-    const o1 = { type: 'test' as const };
-
-    // eslint-disable-next-line jest/no-if
-    if (isErrType('test', o1)) {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-      o1 as { type: 'test' };
-      // eslint-disable-next-line jest/no-conditional-expect
-      expect(o1.type).toStrictEqual('test');
-    }
-
-    // eslint-disable-next-line jest/no-if
-    if (isErrType('test2', o1)) {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-      o1 as never;
-      // eslint-disable-next-line jest/no-conditional-expect
-      expect(o1).toBeFalsy(); // this must be unreachable
-    }
-
-    expect(isErrType('test', {})).toBeFalsy();
   });
 });

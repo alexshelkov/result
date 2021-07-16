@@ -92,25 +92,25 @@ describe('chaining onOk and onErr', () => {
     expect(rOk.ok()).toStrictEqual('r1');
 
     const trOk = await rOk.onOk(async () => {
-      return ok(3) as Result<number, E2['e21']>;
+      return ok(3);
     });
 
     expect(trOk.ok()).toStrictEqual(3);
 
     const trErr = await rOk.onOk(async () => {
-      return fail('e21') as Result<boolean, E2['e21']>;
+      return fail<E2['e21']>('e21');
     });
 
     expect(trErr.err().type).toStrictEqual('e21');
 
     const tr1 = await trErr.onOk(async () => {
-      return ok({ tr1: true }) as Result<{ tr1: true }, E3['e31']>;
+      return ok({ tr1: true });
     });
 
     expect(tr1.err().type).toStrictEqual('e21');
 
     const tr2 = await trErr.onOk(async () => {
-      return fail('e31') as Result<{ tr1: true }, E3['e31']>;
+      return fail<E3['e31']>('e31');
     });
 
     expect(tr2.err().type).toStrictEqual('e21');
@@ -132,7 +132,7 @@ describe('chaining onOk and onErr', () => {
       const r1: Result<{ r1: true }, E1['e11']> = s1 ? ok({ r1: true }) : fail('e11');
 
       const r2 = await r1.onOk(async () => {
-        return s2 ? ok({ r2: true }) : (fail('e21') as Result<{ r2: boolean }, E2['e21']>);
+        return (s2 ? ok({ r2: true }) : fail('e21')) as Result<{ r2: boolean }, E2['e21']>;
       });
 
       const r3 = r2.onErr(async () => {
@@ -158,7 +158,7 @@ describe('chaining onOk and onErr', () => {
       });
 
       const r3 = r2.onOk(async () => {
-        return s2 ? ok({ r2: true }) : (fail('e31') as Result<{ r2: boolean }, E3['e31']>);
+        return (s2 ? ok({ r2: true }) : fail('e31')) as Result<{ r2: boolean }, E3['e31']>;
       });
 
       return r3;
