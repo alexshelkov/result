@@ -1,4 +1,5 @@
 import { Err, Errs, Result, ErrLevel, ok, nope, fail, err, Failure, Success } from '../index';
+import { Transform } from '../types';
 
 type E1 = Err<'e1'>;
 
@@ -61,6 +62,11 @@ describe('result and success/failure types compatability', () => {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       type ExpectedR4 = Assert<false, Equal<Result<string, never>, typeof r1>>;
     }
+
+    if (r1.isErr()) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type ExpectedR5 = Assert<true, Equal<Success<string>, typeof r1>>;
+    }
   });
 
   it('narrowing error type', () => {
@@ -79,6 +85,30 @@ describe('result and success/failure types compatability', () => {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       type ExpectedR4 = Assert<false, Equal<Result<never, E1>, typeof r1>>;
     }
+
+    if (r1.isOk()) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type ExpectedR5 = Assert<true, Equal<Failure<E1>, typeof r1>>;
+    }
+  });
+
+  it('narrowing result to error or success type', () => {
+    expect.assertions(0);
+
+    const r1: Result<string, E1> = fail('e1');
+
+    if (r1.isOk()) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type ExpectedR1 = Assert<true, Equal<Success<string> & Transform<string, E1>, typeof r1>>;
+    }
+
+    if (r1.isErr()) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type ExpectedR2 = Assert<true, Equal<Failure<E1> & Transform<string, E1>, typeof r1>>;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    type ExpectedR3 = Assert<true, Equal<Result<string, E1>, typeof r1>>;
   });
 });
 

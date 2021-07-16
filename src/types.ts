@@ -36,7 +36,7 @@ export interface Failure<Fail> extends PartialFailure<Fail> {
 
 export interface Transform<Data, Fail> {
   onOk<Data2, Fail2>(cb: (data: Data) => Response<Data2, Fail2>): Response<Data2, Fail | Fail2>;
-  onErr<Fail2>(cb: (err: Fail) => Promise<Result<never, Fail2>>): Response<Data, Fail2>;
+  onErr<Fail2>(cb: (err: Fail) => Response<never, Fail2>): Response<Data, Fail2>;
 }
 
 export const ErrLevel = {

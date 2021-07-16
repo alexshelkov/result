@@ -126,7 +126,7 @@ export const complete = <Data, Fail>(partial: PartialResult<Data, Fail>): Result
     cb: (data: Data) => Response<Data2, Fail2>
   ): Response<Data2, Fail | Fail2> => {
     if (result.status === 'error') {
-      return (result as unknown) as Result<Data2, Fail>;
+      return result;
     }
 
     const data = await cb(result.data);
@@ -138,7 +138,7 @@ export const complete = <Data, Fail>(partial: PartialResult<Data, Fail>): Result
     cb: (err: Fail) => Promise<Failure<Fail2>>
   ): Response<Data, Fail2> => {
     if (result.status === 'success') {
-      return (result as unknown) as Result<Data, Fail2>;
+      return result;
     }
 
     const error = await cb(result.error);
@@ -167,10 +167,10 @@ export const ok = <Data = never, Fail = never>(
   return complete(partial) as Success<Data>;
 };
 
-export const err = <Fail = never>(
+export const err = <Fail = never, Data = never>(
   failure: Fail,
   { message, code, order, skip }: FailMessage = {}
-): Failure<Fail> => {
+): Result<Data, Fail> => {
   if (skip) {
     order = -Infinity;
   }
@@ -193,7 +193,7 @@ export const err = <Fail = never>(
     }
   }
 
-  return complete(exception) as Failure<Fail>;
+  return complete(exception);
 };
 
 export const fail = <Fail extends Err | undefined = never, Data = never>(
