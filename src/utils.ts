@@ -1,14 +1,4 @@
-import {
-  Result,
-  PartialResult,
-  Err,
-  Success,
-  Failure,
-  PartialSuccess,
-  PartialFailure,
-  Transform,
-  Response,
-} from './types';
+import { Result, PartialResult, Err, PartialSuccess, PartialFailure, Transform } from './types';
 
 export const isErr = (input: unknown): input is Err => {
   return typeof input === 'object' && input !== null && 'type' in input;
@@ -122,26 +112,24 @@ export const complete = <Data, Fail>(partial: PartialResult<Data, Fail>): Result
     throw new Error("Can't access error on data");
   };
 
-  (result as Transform<Data, Fail>).onOk = async <Data2, Fail2>(
-    cb: (data: Data) => Response<Data2, Fail2>
-  ): Response<Data2, Fail | Fail2> => {
+  (result as Transform<Data, Fail>).onOk = (cb) => {
     if (result.status === 'error') {
       return result;
     }
 
-    const data = await cb(result.data);
+    const data = cb(result.data, result as Result<Data, never>);
 
     return complete(data);
   };
 
-  (result as Transform<Data, Fail>).onErr = async <Fail2>(
-    cb: (err: Fail) => Promise<Failure<Fail2>>
-  ): Response<Data, Fail2> => {
+  (result as Transform<Data, Fail>).onErr = <Fail2>(
+    cb: (err: Fail, _: Result<never, Fail>) => Result<never, Fail2>
+  ): Result<Data, Fail2> => {
     if (result.status === 'success') {
-      return result;
+      return (result as unknown) as Result<Data, Fail2>;
     }
 
-    const error = await cb(result.error);
+    const error = cb(result.error, result);
 
     return complete(error);
   };
@@ -164,7 +152,7 @@ export const ok = <Data = never, Fail = never>(
     order,
   } as PartialSuccess<Data>;
 
-  return complete(partial) as Success<Data>;
+  return complete(partial);
 };
 
 export const err = <Fail = never, Data = never>(
