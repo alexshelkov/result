@@ -1,4 +1,14 @@
-import { Result, PartialResult, Err, PartialSuccess, PartialFailure, Transform } from './types';
+import {
+  Result,
+  PartialResult,
+  Err,
+  PartialSuccess,
+  PartialFailure,
+  Transform,
+  ErrUtil,
+  Success,
+  Failure,
+} from './types';
 
 export const isErr = (input: unknown): input is Err => {
   return typeof input === 'object' && input !== null && 'type' in input;
@@ -17,6 +27,34 @@ export const isErrType = <
   }
 
   return false;
+};
+
+const isHaveStatus = (input: unknown): input is { status: 'error' | 'success' } => {
+  if (!(typeof input === 'object' && input !== null)) {
+    return false;
+  }
+
+  return 'status' in input;
+};
+
+export const isOkLike = <Data>(input: unknown): input is Success<Data> => {
+  if (!isHaveStatus(input)) {
+    return false;
+  }
+
+  return input.status === 'success';
+};
+
+export const isFailureLike = <Error>(input: unknown): input is Failure<Error> => {
+  if (!isHaveStatus(input)) {
+    return false;
+  }
+
+  if (input.status !== 'error') {
+    return false;
+  }
+
+  return input.status === 'error';
 };
 
 export class FailureException<Fail> extends Error implements PartialFailure<Fail> {
@@ -122,16 +160,48 @@ export const complete = <Data, Fail>(partial: PartialResult<Data, Fail>): Result
     return complete(data);
   };
 
-  (result as Transform<Data, Fail>).onErr = <Fail2>(
-    cb: (err: Fail, _: Result<never, Fail>) => Result<never, Fail2>
-  ): Result<Data, Fail2> => {
+  type OnErrRes<Res> = Res extends Result<never, infer Fail2>
+    ? Result<Data, Fail2>
+    : Result<Data, ErrUtil<Res>>;
+
+  (result as Transform<Data, Fail>).onErr = <Res>(
+    cb: (err: Fail, _: Result<never, Fail>) => Res
+  ): OnErrRes<Res> => {
     if (result.status === 'success') {
-      return (result as unknown) as Result<Data, Fail2>;
+      return result as OnErrRes<Res>;
     }
 
     const error = cb(result.error, result);
 
-    return complete(error);
+    if (!isFailureLike<Res>(error)) {
+      if (typeof error === 'string') {
+        const exception = new FailureException(
+          error,
+          { ...result.error, type: error },
+          result.order,
+          result.message,
+          result.code
+        );
+        exception.stack = result.stack;
+        return complete(exception) as OnErrRes<Res>;
+      }
+
+      if (isErr(error)) {
+        const exception = new FailureException(
+          error.type,
+          error,
+          result.order,
+          result.message,
+          result.code
+        );
+        exception.stack = result.stack;
+        return complete(exception) as OnErrRes<Res>;
+      }
+
+      throw new Error("Can't convert to error");
+    }
+
+    return complete(error) as OnErrRes<Res>;
   };
 
   return Object.defineProperties(result, propsDefs) as Result<Data, Fail>;
@@ -214,6 +284,18 @@ export const compare = <Data1, Error1, Data2, Error2>(
   }
 
   return r2;
+};
+
+export const toResult = <Data, Error>(input: unknown): Result<Data, Error> => {
+  if (isOkLike<Data>(input)) {
+    return ok(input.data);
+  }
+
+  if (isFailureLike<Error>(input)) {
+    return err<Error>(input.error);
+  }
+
+  throw new Error('Unexpected input');
 };
 
 export function nope(p: never): never;

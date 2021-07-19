@@ -15,6 +15,11 @@ type E3 = Errs<{
   e32: string;
 }>;
 
+type E4 = Errs<{
+  e41: { test1: number };
+  e42: { test2: string };
+}>;
+
 const rnd = (success: boolean): Result<string, E1['e11']> => {
   return success ? ok('r1') : fail<E1['e11']>('e11');
 };
@@ -161,5 +166,96 @@ describe('chaining onOk and onErr', () => {
     expect(chainOnErrOnOk(true, false).err().type).toStrictEqual('e31');
     expect(chainOnErrOnOk(false, true).err().type).toStrictEqual('e31');
     expect(chainOnErrOnOk(false, false).err().type).toStrictEqual('e31');
+  });
+
+  it('dot chaining', () => {
+    expect.assertions(1);
+
+    // eslint-disable-next-line jest/no-if
+    const r: Result<string, Errs<E1>> = Math.random() ? ok('ok') : fail('e11');
+
+    expect(
+      r
+        .onOk(() => {
+          return ok(1);
+        })
+        .onErr(() => {
+          return fail<Errs<E2>>('e21');
+        })
+        .ok()
+    ).toStrictEqual(1);
+  });
+});
+
+describe('different onErr return types', () => {
+  it('works with string type', () => {
+    expect.assertions(3);
+
+    // eslint-disable-next-line jest/no-if
+    const r: Result<string, Errs<E1>> = Math.random() ? fail('e11') : ok('ok');
+
+    expect(r.err().type).toStrictEqual('e11');
+
+    expect(
+      r
+        .onErr(() => {
+          return 'e12';
+        })
+        .err().type
+    ).toStrictEqual('e12');
+
+    const r2: Result<string, Errs<E2>> = r.onErr(() => {
+      return Math.random() ? 'e21' : { type: 'e22' as const }; // checking type compatability
+    });
+
+    expect(r2.err().type).toStrictEqual('e21');
+  });
+
+  it('works with raw object type', () => {
+    expect.assertions(4);
+
+    // eslint-disable-next-line jest/no-if
+    const r: Result<string, Errs<E1>> = Math.random() ? fail('e11') : ok('ok');
+
+    expect(r.err().type).toStrictEqual('e11');
+
+    expect(
+      r
+        .onErr(() => {
+          return { type: 'e12' };
+        })
+        .err().type
+    ).toStrictEqual('e12');
+
+    const r2: Result<string, Errs<E2>> = r.onErr(() => {
+      return Math.random() ? { type: 'e21' as const } : 'e22'; // checking type compatability
+    });
+
+    expect(r2.err().type).toStrictEqual('e21');
+
+    const r3: Result<string, Errs<E4>> = r.onErr(() => {
+      if (Math.random() === -1) {
+        // will not works if type of test2 is not string
+        return { type: 'e42' as const, test2: '1' }; // checking type compatability
+      }
+
+      return { type: 'e41' as const, test1: 1 }; // checking type compatability
+    });
+
+    const err = r3.err();
+    expect(err.type === 'e41' ? err.test1 : undefined).toStrictEqual(1);
+  });
+
+  it('throws error for invalid err type', () => {
+    expect.assertions(1);
+
+    // eslint-disable-next-line jest/no-if
+    const r: Result<string, Errs<E1>> = Math.random() ? fail('e11') : ok('ok');
+
+    expect(() => {
+      r.onErr(() => {
+        return { a: 'e12' };
+      });
+    }).toThrow("Can't convert to error");
   });
 });

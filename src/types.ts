@@ -38,9 +38,9 @@ export interface Transform<Data, Fail> {
   onOk<Data2, Fail2>(
     cb: (data: Data, res: Result<Data, never>) => Result<Data2, Fail2>
   ): Result<Data2, Fail | Fail2>;
-  onErr<Fail2>(
-    cb: (err: Fail, res: Result<never, Fail>) => Result<never, Fail2>
-  ): Result<Data, Fail2>;
+  onErr<Res>(
+    cb: (err: Fail, res: Result<never, Fail>) => Res
+  ): Res extends Result<never, infer Fail2> ? Result<Data, Fail2> : Result<Data, ErrUtil<Res>>;
 }
 
 export const ErrLevel = {

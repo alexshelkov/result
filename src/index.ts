@@ -9,6 +9,16 @@ export {
   Errs,
 } from './types';
 
-export { ok, fail, err, compare, isErr, isErrType, nope, FailureException } from './utils';
-
-export { isFailureLike, isOkLike, toResult } from './cast';
+export {
+  ok,
+  fail,
+  err,
+  compare,
+  isErr,
+  isErrType,
+  nope,
+  isOkLike,
+  isFailureLike,
+  toResult,
+  FailureException,
+} from './utils';
