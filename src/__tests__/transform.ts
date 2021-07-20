@@ -192,7 +192,7 @@ describe('different onErr return types', () => {
     expect.assertions(3);
 
     // eslint-disable-next-line jest/no-if
-    const r: Result<string, Errs<E1>> = Math.random() ? fail('e11') : ok('ok');
+    const r: Result<string, E1['e11']> = Math.random() ? fail('e11') : ok('ok');
 
     expect(r.err().type).toStrictEqual('e11');
 
@@ -205,6 +205,10 @@ describe('different onErr return types', () => {
     ).toStrictEqual('e12');
 
     const r2: Result<string, Errs<E2>> = r.onErr(() => {
+      if (Math.random() === -1) {
+        return fail('e21');
+      }
+
       return Math.random() ? 'e21' : { type: 'e22' as const }; // checking type compatability
     });
 
@@ -228,6 +232,10 @@ describe('different onErr return types', () => {
     ).toStrictEqual('e12');
 
     const r2: Result<string, Errs<E2>> = r.onErr(() => {
+      if (Math.random() === -1) {
+        return fail('e22');
+      }
+
       return Math.random() ? { type: 'e21' as const } : 'e22'; // checking type compatability
     });
 

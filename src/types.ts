@@ -16,13 +16,25 @@ export interface PartialFailure<Fail> extends Error, CompareResult {
   error: Fail;
 }
 
+export interface Transform<Data, Fail> {
+  onOk<Data2, Fail2>(
+    cb: (data: Data, res: Result<Data, never>) => Result<Data2, Fail2>
+  ): Result<Data2, Fail | Fail2>;
+  onErr<Fail2>(
+    cb: (err: Fail, res: Result<never, Fail>) => Result<never, Fail2>
+  ): Result<Data, Fail2>;
+  onErr<Res>(
+    cb: (err: Fail, res: Result<never, Fail>) => Res
+  ): Res extends Result<never, infer Fail2> ? Result<Data, Fail2> : Result<Data, ErrUtil<Res>>;
+}
+
 export interface Success<Data> extends PartialSuccess<Data> {
   ok(): Data;
   isOk(): this is Success<Data>;
   isErr(): false;
   err(): never;
-  onOk(cb: never): never;
-  onErr(cb: never): never;
+  onOk(): never;
+  onErr(): never;
 }
 
 export interface Failure<Fail> extends PartialFailure<Fail> {
@@ -30,17 +42,8 @@ export interface Failure<Fail> extends PartialFailure<Fail> {
   ok(): never;
   isErr(): this is Failure<Fail>;
   err(): Fail;
-  onOk(cb: never): never;
-  onErr(cb: never): never;
-}
-
-export interface Transform<Data, Fail> {
-  onOk<Data2, Fail2>(
-    cb: (data: Data, res: Result<Data, never>) => Result<Data2, Fail2>
-  ): Result<Data2, Fail | Fail2>;
-  onErr<Res>(
-    cb: (err: Fail, res: Result<never, Fail>) => Res
-  ): Res extends Result<never, infer Fail2> ? Result<Data, Fail2> : Result<Data, ErrUtil<Res>>;
+  onOk(): never;
+  onErr(): never;
 }
 
 export const ErrLevel = {
