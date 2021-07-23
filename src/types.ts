@@ -16,18 +16,6 @@ export interface PartialFailure<Fail> extends Error, CompareResult {
   error: Fail;
 }
 
-export interface Transform<Data, Fail> {
-  onOk<Data2, Fail2>(
-    cb: (data: Data, res: Result<Data, never>) => Result<Data2, Fail2>
-  ): Result<Data2, Fail | Fail2>;
-  onErr<Fail2>(
-    cb: (err: Fail, res: Result<never, Fail>) => Result<never, Fail2>
-  ): Result<Data, Fail2>;
-  onErr<Res>(
-    cb: (err: Fail, res: Result<never, Fail>) => Res
-  ): Res extends Result<never, infer Fail2> ? Result<Data, Fail2> : Result<Data, ErrUtil<Res>>;
-}
-
 export interface Success<Data> extends PartialSuccess<Data> {
   ok(): Data;
   isOk(): this is Success<Data>;
@@ -44,6 +32,33 @@ export interface Failure<Fail> extends PartialFailure<Fail> {
   err(): Fail;
   onOk(): never;
   onErr(): never;
+}
+
+export interface Transform<Data, Fail> {
+  onOk<Data2, Fail2>(
+    cb: (data: Data, res: Result<Data, never>) => Result<Data2, Fail2>
+  ): Result<Data2, Fail | Fail2>;
+
+  onErr<Fail2>(
+    cb: (err: Fail, res: Result<never, Fail>) => Result<never, Fail2>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): Failure<Fail2> & Transform<Data, Fail2>;
+
+  onErr<Res>(
+    cb: (err: Fail, res: Result<never, Fail>) => Res
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): Res extends Result<any, infer Fail2>
+    ? Failure<Fail2> & Transform<Data, Fail2>
+    : Failure<ErrUtil<Res>> & Transform<Data, ErrUtil<Res>>;
+
+  onErr<Fail2>(
+    cb: (err: Fail, res: Result<never, Fail>) => Result<never, Fail2>
+  ): Result<Data, Fail2>;
+
+  onErr<Res>(
+    cb: (err: Fail, res: Result<never, Fail>) => Res
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): Res extends Result<any, infer Fail2> ? Result<Data, Fail2> : Result<Data, ErrUtil<Res>>;
 }
 
 export const ErrLevel = {

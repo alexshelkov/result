@@ -1,4 +1,6 @@
-import { Errs, fail, ok, Result } from '../index';
+import { Errs, Failure, Result, ok, fail } from '../index';
+import { Transform } from '../types';
+import { Assert, Equal } from '../__stubs__/helpers';
 
 type E1 = Errs<{
   e11: string;
@@ -74,6 +76,48 @@ describe('onErr', () => {
     expect(transformed.ok()).toStrictEqual('r1');
   });
 
+  it('success isOk and onOk', () => {
+    expect.assertions(4);
+
+    const rOk = rnd(true);
+
+    expect(rOk.ok()).toStrictEqual('r1');
+
+    if (rOk.isOk()) {
+      const r0 = rOk.onErr();
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type ExpectedR0 = Assert<true, Equal<typeof r0, never>>;
+
+      const r1 = rOk.onOk(() => {
+        return ok('r11');
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type ExpectedR1 = Assert<true, Equal<typeof r1, Result<string, E1['e11']>>>;
+      // eslint-disable-next-line jest/no-conditional-expect
+      expect(r1.ok()).toStrictEqual('r11');
+
+      const r2 = rOk.onOk(() => {
+        return fail<E2['e21']>('e21');
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type ExpectedR2 = Assert<true, Equal<typeof r2, Result<never, E1['e11'] | E2['e21']>>>;
+      // eslint-disable-next-line jest/no-conditional-expect
+      expect(r2.err().type).toStrictEqual('e21');
+
+      const r3 = rOk.onOk(() => {
+        return Math.random() !== -1 ? ok(1) : fail<E2['e21']>('e21');
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type ExpectedR3 = Assert<true, Equal<typeof r3, Result<number, E1['e11'] | E2['e21']>>>;
+      // eslint-disable-next-line jest/no-conditional-expect
+      expect(r3.ok()).toStrictEqual(1);
+    }
+  });
+
   it('fail', () => {
     expect.assertions(2);
 
@@ -84,6 +128,69 @@ describe('onErr', () => {
     const transformed = rErr.onErr(onErr);
 
     expect(transformed.err().type).toStrictEqual('e21');
+  });
+
+  it('fail isErr and onErr', () => {
+    expect.assertions(5);
+
+    const rErr = rnd(false);
+
+    expect(rErr.err().type).toStrictEqual('e11');
+
+    if (rErr.isErr()) {
+      const r0 = rErr.onOk();
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type ExpectedR = Assert<true, Equal<typeof r0, never>>;
+
+      const r1 = rErr.onErr(() => {
+        return fail<E1['e11']>('e11');
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type ExpectedR1 = Assert<
+        true,
+        Equal<typeof r1, Failure<E1['e11']> & Transform<string, E1['e11']>>
+      >;
+      // eslint-disable-next-line jest/no-conditional-expect
+      expect(r1.err().type).toStrictEqual('e11');
+
+      const r2 = rErr.onErr(() => {
+        return 'e12' as const;
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type ExpectedR2 = Assert<
+        true,
+        Equal<typeof r2, Failure<E1['e12']> & Transform<string, E1['e12']>>
+      >;
+      // eslint-disable-next-line jest/no-conditional-expect
+      expect(r2.err().type).toStrictEqual('e12');
+
+      const r3 = r2.onErr(() => {
+        return 'e31' as const;
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type ExpectedR3 = Assert<
+        true,
+        Equal<typeof r3, Failure<E3['e31']> & Transform<string, E3['e31']>>
+      >;
+      // eslint-disable-next-line jest/no-conditional-expect
+      expect(r3.err().type).toStrictEqual('e31');
+
+      const r4 = r3.onErr(() => {
+        return { type: 'e41' as const, test1: 5 };
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type ExpectedR4 = Assert<
+        true,
+        Equal<typeof r4, Failure<E4['e41']> & Transform<string, E4['e41']>>
+      >;
+      // eslint-disable-next-line jest/no-conditional-expect
+      expect(r4.err().type).toStrictEqual('e41');
+    }
   });
 });
 

@@ -161,14 +161,14 @@ export const complete = <Data, Fail>(partial: PartialResult<Data, Fail>): Result
   };
 
   type OnErrRes<Res> = Res extends Result<never, infer Fail2>
-    ? Result<Data, Fail2>
-    : Result<Data, ErrUtil<Res>>;
+    ? Failure<Fail2> & Transform<never, Fail2>
+    : Failure<ErrUtil<Res>> & Transform<never, ErrUtil<Res>>;
 
   (result as Transform<Data, Fail>).onErr = <Res>(
     cb: (err: Fail, _: Result<never, Fail>) => Res
   ): OnErrRes<Res> => {
     if (result.status === 'success') {
-      return result as OnErrRes<Res>;
+      return (result as unknown) as OnErrRes<Res>;
     }
 
     const error = cb(result.error, result);

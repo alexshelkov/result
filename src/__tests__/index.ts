@@ -1,22 +1,6 @@
 import { Err, Errs, Result, ErrLevel, ok, nope, fail, err, Failure, Success } from '../index';
 import { Transform } from '../types';
-
-type E1 = Err<'e1'>;
-
-type E2 = Err<'e2', { stringAdded: 'e2data' }>;
-
-interface E3<T> extends Err {
-  type: 'e3';
-  numberAdded: T;
-}
-
-type AppErr = E1 | E2 | E3<number>;
-
-type Assert<A extends boolean, T extends A> = T;
-
-type Equal<X, Y> = (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2
-  ? true
-  : false;
+import { Assert, Equal, E1, E2, E3, AppErr } from '../__stubs__/helpers';
 
 describe('result and success/failure types compatability', () => {
   it('success assignable to result', () => {
@@ -109,6 +93,31 @@ describe('result and success/failure types compatability', () => {
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     type ExpectedR3 = Assert<true, Equal<Result<string, E1>, typeof r1>>;
+  });
+
+  it('combines two results into one', () => {
+    expect.assertions(2);
+
+    type R1 = { r1: string };
+    type R2 = { r2: number };
+
+    // eslint-disable-next-line jest/no-if
+    const r1: Result<R1, E1 | E2> = Math.random() ? ok({ r1: '1' }) : fail('e2');
+    // eslint-disable-next-line jest/no-if
+    const r2: Result<R2, E3<string>> = Math.random() ? ok({ r2: 2 }) : fail('e3');
+
+    let r3: Result<{ ra: R1; rb: R2 }, AppErr>;
+
+    r3 = ok({
+      ra: r1.ok(),
+      rb: r2.ok(),
+    });
+
+    expect(r3.ok()).toMatchObject({ ra: { r1: '1' }, rb: { r2: 2 } });
+
+    r3 = fail('e1');
+
+    expect(r3.err().type).toStrictEqual('e1');
   });
 });
 
