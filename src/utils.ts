@@ -160,11 +160,9 @@ export const complete = <Data, Fail>(partial: PartialResult<Data, Fail>): Result
     return complete(data);
   };
 
-  type OnErrRes<Res> = Res extends Result<never, infer Fail2>
-    ? Failure<Fail2> & Transform<never, Fail2>
-    : Failure<ErrUtil<Res>> & Transform<never, ErrUtil<Res>>;
+  type OnErrRes<Res> = Failure<ErrUtil<Res>> & Transform<never, ErrUtil<Res>>;
 
-  (result as Transform<Data, Fail>).onErr = <Res>(
+  (result as Transform<Data, Fail> & PartialFailure<Fail>).onErr = <Res>(
     cb: (err: Fail, _: Result<never, Fail>) => Res
   ): OnErrRes<Res> => {
     if (result.status === 'success') {
@@ -183,7 +181,7 @@ export const complete = <Data, Fail>(partial: PartialResult<Data, Fail>): Result
           result.code
         );
         exception.stack = result.stack;
-        return complete(exception) as OnErrRes<Res>;
+        return (complete(exception) as unknown) as OnErrRes<Res>;
       }
 
       if (isErr(error)) {
@@ -195,13 +193,13 @@ export const complete = <Data, Fail>(partial: PartialResult<Data, Fail>): Result
           result.code
         );
         exception.stack = result.stack;
-        return complete(exception) as OnErrRes<Res>;
+        return (complete(exception) as unknown) as OnErrRes<Res>;
       }
 
       throw new Error("Can't convert to error");
     }
 
-    return complete(error) as OnErrRes<Res>;
+    return (complete(error) as unknown) as OnErrRes<Res>;
   };
 
   return Object.defineProperties(result, propsDefs) as Result<Data, Fail>;

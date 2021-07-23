@@ -40,6 +40,8 @@ describe('onOk', () => {
 
     const transformed = rOk.onOk(onOk);
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    type Expected = Assert<true, Equal<typeof transformed, Result<boolean, E1['e11'] | E2['e21']>>>;
     expect(transformed.ok()).toStrictEqual(true);
   });
 
@@ -55,6 +57,8 @@ describe('onOk', () => {
     // type was Result<boolean, e11 | e21>
     const transformed = rErr.onOk(onOk);
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    type Expected = Assert<true, Equal<typeof transformed, Result<boolean, E1['e11'] | E2['e21']>>>;
     expect(transformed.err().type).toStrictEqual('e11');
   });
 });

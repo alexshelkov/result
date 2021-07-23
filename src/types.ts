@@ -39,17 +39,15 @@ export interface Transform<Data, Fail> {
     cb: (data: Data, res: Result<Data, never>) => Result<Data2, Fail2>
   ): Result<Data2, Fail | Fail2>;
 
-  onErr<Fail2>(
-    cb: (err: Fail, res: Result<never, Fail>) => Result<never, Fail2>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): Failure<Fail2> & Transform<Data, Fail2>;
-
   onErr<Res>(
     cb: (err: Fail, res: Result<never, Fail>) => Res
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): Res extends Result<any, infer Fail2>
-    ? Failure<Fail2> & Transform<Data, Fail2>
-    : Failure<ErrUtil<Res>> & Transform<Data, ErrUtil<Res>>;
+  ): this extends PartialFailure<any>
+    ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      Res extends Result<any, infer Fail2>
+      ? Failure<Fail2> & Transform<Data, Fail2>
+      : Failure<ErrUtil<Res>> & Transform<Data, ErrUtil<Res>>
+    : never;
 
   onErr<Fail2>(
     cb: (err: Fail, res: Result<never, Fail>) => Result<never, Fail2>
