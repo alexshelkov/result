@@ -210,31 +210,51 @@ describe('chaining onOk and onErr', () => {
       return ok(3);
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    type ExpectedTrOk = Assert<true, Equal<typeof trOk, Result<number, E1['e11']>>>;
     expect(trOk.ok()).toStrictEqual(3);
 
     const trErr = rOk.onOk(() => {
+      if (Math.random() === -1) {
+        return ok('1');
+      }
+
       return fail<E2['e21']>('e21');
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    type ExpectedTrErr = Assert<true, Equal<typeof trErr, Result<string, E1['e11'] | E2['e21']>>>;
     expect(trErr.err().type).toStrictEqual('e21');
 
     const tr1 = trErr.onOk(() => {
       return ok({ tr1: true });
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    type ExpectedTr1 = Assert<
+      true,
+      Equal<typeof tr1, Result<{ tr1: boolean }, E1['e11'] | E2['e21']>>
+    >;
     expect(tr1.err().type).toStrictEqual('e21');
 
     const tr2 = trErr.onOk(() => {
       return fail<E3['e31']>('e31');
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    type ExpectedTr2 = Assert<
+      true,
+      Equal<typeof tr2, Result<never, E1['e11'] | E2['e21'] | E3['e31']>>
+    >;
     expect(tr2.err().type).toStrictEqual('e21');
 
     const tr3 = trErr.onErr(() => {
-      return fail<E3['e31']>('e31');
+      return fail<E4['e41']>('e41');
     });
 
-    expect(tr3.err().type).toStrictEqual('e31');
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    type ExpectedTr3 = Assert<true, Equal<typeof tr3, Result<string, E4['e41']>>>;
+    expect(tr3.err().type).toStrictEqual('e41');
   });
 
   it('two results', () => {
