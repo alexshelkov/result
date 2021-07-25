@@ -200,7 +200,7 @@ describe('onErr', () => {
 
 describe('chaining onOk and onErr', () => {
   it('success then error', () => {
-    expect.assertions(8);
+    expect.assertions(6);
 
     const rOk = rnd(true);
 
