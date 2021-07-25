@@ -70,7 +70,7 @@ export const ErrLevel = {
   Notice: 5,
   Info: 6,
   Debug: 7,
-};
+} as const;
 
 export type Err = {
   type: string;
