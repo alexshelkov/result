@@ -1,4 +1,4 @@
-import { Errs, Failure, Result, ok, fail } from '../index';
+import { Errs, Failure, Result, ok, fail, Err } from '../index';
 import { Transform } from '../types';
 import { Assert, Equal } from '../__stubs__/helpers';
 
@@ -200,7 +200,7 @@ describe('onErr', () => {
 
 describe('chaining onOk and onErr', () => {
   it('success then error', () => {
-    expect.assertions(6);
+    expect.assertions(8);
 
     const rOk = rnd(true);
 
@@ -386,14 +386,20 @@ describe('different onErr return types', () => {
   });
 
   it('throws error for invalid err type', () => {
-    expect.assertions(1);
+    expect.assertions(2);
 
     // eslint-disable-next-line jest/no-if
     const r: Result<string, Errs<E1>> = Math.random() ? fail('e11') : ok('ok');
 
     expect(() => {
       r.onErr(() => {
-        return { a: 'e12' };
+        return ({ a: 'e12' } as unknown) as Err;
+      });
+    }).toThrow("Can't convert to error");
+
+    expect(() => {
+      r.onErr(() => {
+        return 5 as never;
       });
     }).toThrow("Can't convert to error");
   });
