@@ -1,7 +1,6 @@
-/* eslint-disable @typescript-eslint/ban-types */
-
 import { Err, isErr, isErrType } from '../index';
 
+// eslint-disable-next-line @typescript-eslint/ban-types
 type TestErr<T, A = {}> = {
   type: T;
   message?: string;
@@ -33,6 +32,7 @@ describe('error type', () => {
 
     const e2 = {
       type: 'e1',
+      // eslint-disable-next-line @typescript-eslint/ban-types
     } as Err<{}, { type: 'e1' }>;
 
     expect(e2.type).toStrictEqual('e1');
@@ -79,7 +79,6 @@ describe('error utils', () => {
     if (isErrType('test', o1)) {
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
       o1 as { type: 'test' };
-      // eslint-disable-next-line jest/no-conditional-expect
       expect(o1.type).toStrictEqual('test');
     }
 
@@ -87,7 +86,6 @@ describe('error utils', () => {
     if (isErrType('test2', o1)) {
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
       o1 as never;
-      // eslint-disable-next-line jest/no-conditional-expect
       expect(o1).toBeFalsy(); // this must be unreachable
     }
 

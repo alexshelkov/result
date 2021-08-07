@@ -1,24 +1,20 @@
+export { ErrUtil as Err, Err as ErrInfo, ErrLevel, Errs } from './err';
+
+export { Success, Failure, Result, Response } from './result';
+
 export {
-  Success,
-  Failure,
-  Result,
-  Response,
-  ErrUtil as Err,
-  Err as ErrInfo,
-  ErrLevel,
-  Errs,
-} from './types';
+  isErr,
+  isErrType,
+  isSuccessLike,
+  isFailureLike
+} from './checks'
 
 export {
   ok,
   fail,
   err,
   compare,
-  isErr,
-  isErrType,
   nope,
-  isOkLike,
-  isFailureLike,
   toResult,
   FailureException,
 } from './utils';

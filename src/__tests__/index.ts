@@ -1,6 +1,27 @@
 import { Err, Errs, Result, ErrLevel, ok, nope, fail, err, Failure, Success } from '../index';
-import { Transform } from '../types';
 import { Assert, Equal, E1, E2, E3, AppErr } from '../__stubs__/helpers';
+
+describe('result types compatability', () => {
+  it('not allow to assign results with not different error type to each other', () => {
+    expect.assertions(2);
+
+    const r1: Result<string, Err<'e1'> | Err<'e2'>> = fail('e1');
+
+    let r2: Result<string, Err<'e2'>> = fail('e2');
+
+    expect(r1.err().type).toStrictEqual('e1');
+
+    type Expected = Assert<false, Equal<typeof r2, typeof r1>>;
+
+    if (Math.random()) {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      r2 = r1; // this must be a TS error, need to be tested better
+    }
+
+    expect(r1.err().type).toStrictEqual('e1');
+  });
+});
 
 describe('result and success/failure types compatability', () => {
   it('success assignable to result', () => {
@@ -10,7 +31,10 @@ describe('result and success/failure types compatability', () => {
 
     expect(r1.ok()).toStrictEqual('ok1');
 
-    const r2: Result<string, never> = ({ status: 'ok', data: 'ok2' } as unknown) as Success<string>;
+    const r2: Result<string, never> = ({
+      status: 'success',
+      data: 'ok2',
+    } as unknown) as Success<string>;
 
     expect(r2.data).toStrictEqual('ok2');
   });
@@ -30,25 +54,40 @@ describe('result and success/failure types compatability', () => {
     expect(r2.error.type).toStrictEqual('e1');
   });
 
+  it('result is assignable to result with never as success or error', () => {
+    expect.assertions(2);
+
+    const r1: Result<string, E1> = ({ status: 'success', data: 'ok1' } as unknown) as Result<
+      string,
+      never
+    >;
+
+    // eslint-disable-next-line jest/no-if
+    expect(r1.status === 'success' ? r1.data : undefined).toStrictEqual('ok1');
+
+    const r2: Result<string, E1> = ({
+      status: 'error',
+      error: { type: 'e1' },
+    } as unknown) as Result<never, E1>;
+
+    // eslint-disable-next-line jest/no-if
+    expect(r2.status === 'error' ? r2.error.type : undefined).toStrictEqual('e1');
+  });
+
   it('narrowing success type', () => {
     expect.assertions(0);
 
     const r1 = ok('ok1');
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    type ExpectedR1 = Assert<false, Equal<Success<string>, typeof r1>>;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    type ExpectedR2 = Assert<true, Equal<Result<string, never>, typeof r1>>;
+    type ExpectedR1 = Assert<true, Equal<Success<string>, typeof r1>>;
+    type ExpectedR2 = Assert<false, Equal<Result<string, never>, typeof r1>>;
 
     if (r1.isOk()) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       type ExpectedR3 = Assert<true, Equal<Success<string>, typeof r1>>;
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       type ExpectedR4 = Assert<false, Equal<Result<string, never>, typeof r1>>;
     }
 
     if (r1.isErr()) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       type ExpectedR5 = Assert<true, Equal<Success<string>, typeof r1>>;
     }
   });
@@ -58,20 +97,15 @@ describe('result and success/failure types compatability', () => {
 
     const r1 = fail<E1>('e1');
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    type ExpectedR1 = Assert<false, Equal<Failure<E1>, typeof r1>>;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    type ExpectedR2 = Assert<true, Equal<Result<never, E1>, typeof r1>>;
+    type ExpectedR1 = Assert<true, Equal<Failure<E1>, typeof r1>>;
+    type ExpectedR2 = Assert<false, Equal<Result<never, E1>, typeof r1>>;
 
     if (r1.isErr()) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       type ExpectedR3 = Assert<true, Equal<Failure<E1>, typeof r1>>;
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       type ExpectedR4 = Assert<false, Equal<Result<never, E1>, typeof r1>>;
     }
 
     if (r1.isOk()) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       type ExpectedR5 = Assert<true, Equal<Failure<E1>, typeof r1>>;
     }
   });
@@ -79,19 +113,17 @@ describe('result and success/failure types compatability', () => {
   it('narrowing result to error or success type', () => {
     expect.assertions(0);
 
-    const r1: Result<string, E1> = fail('e1');
+    // eslint-disable-next-line jest/no-if
+    const r1: Result<string, E1> = Math.random() ? ok('1') : fail('e1');
 
     if (r1.isOk()) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      type ExpectedR1 = Assert<true, Equal<Success<string> & Transform<string, E1>, typeof r1>>;
+      type ExpectedR1 = Assert<true, Equal<Success<string>, typeof r1>>;
     }
 
     if (r1.isErr()) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      type ExpectedR2 = Assert<true, Equal<Failure<E1> & Transform<string, E1>, typeof r1>>;
+      type ExpectedR2 = Assert<true, Equal<Failure<E1>, typeof r1>>;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     type ExpectedR3 = Assert<true, Equal<Result<string, E1>, typeof r1>>;
   });
 
@@ -355,20 +387,19 @@ describe('result', () => {
     });
 
     it('types inferred from different fails and oks', () => {
-      expect.assertions(3);
+      expect.assertions(4);
 
       // eslint-disable-next-line jest/no-if
       const r1 = Math.random() !== -1 ? ok(1) : fail<Err<'e1' | 'e3'>>('e1');
 
       expect(r1.ok()).toStrictEqual(1);
 
-      type R2 = Result<never, Err<'e1' | 'e3'>> | Result<never, E2> | Result<number, never>;
+      type R2 = Failure<Err<'e1' | 'e3'>> | Failure<E2> | Success<number>;
 
       const e1 = fail<E2>('e2', { stringAdded: 'e2data' });
       const r2 = Math.random() !== -1 ? e1 : r1;
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      type ExpextedR2 = Assert<true, Equal<R2, typeof r2>>;
+      type ExpectedR2 = Assert<true, Equal<R2, typeof r2>>;
 
       expect(r2.err().type).toStrictEqual('e2');
 
@@ -378,6 +409,10 @@ describe('result', () => {
         // eslint-disable-next-line no-nested-ternary
         r3.isErr() ? (r3.error.type === 'e2' ? r3.error.stringAdded : undefined) : undefined
       ).toStrictEqual('e2data');
+
+      const res3: Result<number, Err<'e1' | 'e3'> | E2> = r3;
+
+      expect(res3.isErr()).toBeTruthy();
     });
   });
 });

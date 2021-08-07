@@ -47,6 +47,25 @@ describe('util', () => {
     expect(r.err()).toBeUndefined();
   });
 
+  it('converting result to string', () => {
+    expect.assertions(3);
+
+    const r1 = ok('1');
+
+    expect(r1.toString()).toStrictEqual('Success<"1">');
+
+    const r2 = fail<Err>('1');
+
+    expect(r2.toString()).toStrictEqual('Failure<{"type":"1"}>');
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/no-unsafe-member-access
+    (r2 as any).status = 'any';
+
+    expect(() => {
+      r2.toString();
+    }).toThrow('Unknown status');
+  });
+
   it('never will throw exception if called', () => {
     expect.assertions(1);
 
