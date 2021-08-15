@@ -1,5 +1,5 @@
-Type-safe error handling without exceptions
-===========================================
+# Type-safe error handling without exceptions
+
 Flexible and explicit error handling with a small flavor of functional languages.
 
 [![TypeScript](https://img.shields.io/badge/%3C%2F%3E-TypeScript-%230074c1.svg)](https://www.typescriptlang.org/)
@@ -12,34 +12,39 @@ Result type allows you go from this:
 const user = getUser(email);
 
 if (!user) {
-    throw new Error("Can't get user") // but what happens, why email is invalid? 
-                                      // and who will catch this error?
+  throw new Error("Can't get user"); 
+  // but what happens, why email is invalid?
+  // and who will catch this error?
 }
 ```
+
 to this:
+
 ```javascript
 const userResult = getUser(email);
 
 if (userResult.isErr()) {
   const err = userResult.err();
-  
+
   switch (err.type) {
     case 'InvalidEmail':
-      console.log('User email is invalid'); break;
+      console.log('User email is invalid');
+      break;
     case 'UserNotExists':
-      console.log("Can't find the user"); break;
+      console.log("Can't find the user");
+      break;
     case 'UserBannded':
-      console.log(`User was bannded: ${err.ban}`); break;
+      console.log(`User was bannded: ${err.ban}`);
+      break;
   }
 }
 ```
 
-Usage:
-======
+# Usage:
 
 ### Creating result
 
-There are two main function for creating results `ok` and `fail`. 
+There are two main function for creating results `ok` and `fail`.
 
 ```typescript
 import { Err, Result, ok, fail } from 'lambda-res';
@@ -51,36 +56,56 @@ const error = fail<Err>('bad'); // inferred as Failure<string>
 const result: Result<string, Err> = Math.random() ? success : error;
 ```
 
-### The `Err` type
+###  The `Err` and `Errs` type
 
 `Err` used for creating errors of given type.
 
 ```typescript
-import { Failure, Err, fail, nope }  from 'lambda-res';
+import { Failure, Err, fail, nope } from 'lambda-res';
 
-type DatabaseError = Err<'DatabaseError'>; // same as: { type: 'DatabaseError' }
-type ConnectionError = Err<'ConnectionError'>;
+// same as: { type: 'AppDatabaseError' } & Err
+type DatabaseError = Err<'AppDatabaseError'>; 
+type ConnectionError = Err<'AppConnectionError'>;
 
-type AppError = DatabaseError | ConnectionError // | Err<'NotHandled'>;
+type AppErrors = DatabaseError | ConnectionError; // | Err<'NotHandled'>;
 
-const check = (err: AppError): string => {
-  if (err.type === 'DatabaseError') {
+const check = (err: AppErrors): string => {
+  if (err.type === 'AppDatabaseError') {
     return 'Database error';
   }
 
-  if (err.type === 'ConnectionError') {
+  if (err.type === 'AppConnectionError') {
     return 'Connection error';
   }
 
   // try unncoment NotHandled error and typescript will show a problem here!
   // that ensures that all error types are checked exhaustively
-  nope(err); 
+  nope(err);
 };
 
 // must match the types or Typescript will show an error
-const failure: Failure<AppError> = fail<DatabaseError>('DatabaseError');
+const failure: Failure<AppErrors> = fail<DatabaseError>('AppDatabaseError');
 
 check(failure.err()); // get en error from failure
+```
+
+`Errs` type can be used to create multiple errors of a given kind, which may be
+useful in order not to pollute your exports with multiple individual errors
+(like: `DatabaseError, ConnectionError`).
+
+```typescript
+import { Failure, Errs, fail } from 'lambda-res';
+
+// only AppError needs to be exported
+type AppError = Errs<{
+  name: 'App';
+  DatabaseError: string;
+  ConnectionError: string;
+}>;
+
+// note an Errs here (inside Failure): 
+// it transform AppError into Err<'AppDatabaseError'> | Err<'AppConnectionError'>
+const failure: Failure<Errs<AppError>> = fail<AppError['DatabaseError']>('AppDatabaseError');
 ```
 
 ### Using result
@@ -110,3 +135,90 @@ if (result.isErr()) {
 // this will throw an exception because result is not a Failure
 // that is why isErr check used first
 ```
+
+### Mapping result with `onOk` and `onErr`
+
+```typescript
+import { Response, Errs, ok, fail, nope } from 'lambda-res';
+
+type GetUserEmailError = Errs<{
+  name: 'GetUserEmail';
+  NotFound: string;
+  Deleted: string;
+}>;
+
+const getUserName = async (id: string): Response<string, Errs<GetUserEmailError>> => {
+  if (id === 'id1') {
+    return ok('email@example.com');
+  } else if (id === 'id2') {
+    return fail('GetUserEmailDeleted');
+  }
+  return fail('GetUserEmailNotFound');
+};
+
+type SendEmailError = Errs<{
+  name: 'SendEmail';
+  DeliveryError: string;
+}>;
+
+const sendEmail = async (email: string): Response<{ sentCount: number }, Errs<SendEmailError>> => {
+  if (email === 'email@example.com') {
+    return ok({ sentCount: 3 })
+  }
+  return fail('SendEmailDeliveryError')
+}
+
+const sendEmailToUser = async () /*: Response<{ sentCount: number }, Err<'DeliveryError'> | Err<'LoadingUserError'>> */ => {
+  const userNameRes = await getUserName('id1');
+
+  return userNameRes.onOk(async (email) => {
+    const sendRes = await sendEmail(email); 
+
+    return sendRes;
+  }).onErr((err) => {
+    if (err.type === 'SendEmailDeliveryError') {
+      return { type: 'DeliveryError' }
+    } else if (err.type === 'GetUserEmailDeleted' || err.type === 'GetUserEmailNotFound') {
+      return { type: 'LoadingUserError'  }
+    }
+    nope(err);
+  }).res();
+}
+```
+
+------------------------------------------------------------------------
+
+#### `Result<Data, Fail>`.`onOk`
+
+On success return new `Data2` and collects all errors. Used to sequentially run multiple functions 
+which returns result. In the end `onErr` can map errors to desired error type.
+
+Params:
+
+- `cb`: callback which receives
+    - `data`: `Data`
+    - `res`: `Result<Data, never>`
+
+- `name` _(optional)_ : common error name, it will prepend all errors types
+
+Returns:
+
+- `Result<Data2, Fail | Fail2>` or `Response<Data2, Fail | Fail2>` (for async functions)
+
+------------------------------------------------------------------------
+
+#### `Result<Data, Fail>`.`onErr`
+
+Doesn't change `Data` and returns new `Fail2` — used to map one type of errors to another. Unlike `onOk`, `onErr` 
+can't return successful result, but it may return an object with error type.  
+
+Params:
+
+- `cb`: callback which receives
+    - `err`: `Fail`
+    - `res`: `Result<never, Fail>`
+
+Returns:
+
+- `Result<never, Fail2>`, `{ type: string }` or `Response<never, Fail2>`, `Promise<{ type: string }>`
+
