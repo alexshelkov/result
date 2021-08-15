@@ -36,7 +36,8 @@ export interface Transform<Data, Fail, Chain extends boolean = false> {
 
   onOk<Data2,
        Fail2,
-       Res extends Response<Data2, Fail2> | Result<Data2, Fail2>>(
+       Res extends Response<Data2, Fail2> | Result<Data2, Fail2>>
+  (
     cb: (data: Data, res: Result<Data, never>) => Response<Data2, Fail2> | Result<Data2, Fail2> | Res
   ): Chain extends true ?
 
@@ -54,7 +55,8 @@ export interface Transform<Data, Fail, Chain extends boolean = false> {
 
   onErr<Fail2,
         Type extends string,
-        Res extends Response<never, Fail2> | Promise<{ type: Type }> | Result<never, Fail2> | { type: Type }>(
+        Res extends Response<never, Fail2> | Promise<{ type: Type }> | Result<never, Fail2> | { type: Type }>
+  (
     cb: (
       err: Fail,
       res: Result<never, Fail>
@@ -78,7 +80,10 @@ export interface Transform<Data, Fail, Chain extends boolean = false> {
 
   // ----------------------------------------------------------------------------------
 
-  onErr<Name extends string, Fail2, Type extends string, Res>(
+  onErr<Name extends string,
+        Fail2, Type extends string,
+        Res extends Response<never, Fail2> | Promise<{ type: Type }> | Result<never, Fail2> | { type: Type }>
+  (
     name: Name,
     cb: (err: Fail, res: Result<never, Fail>) => Response<never, Fail2> | Promise<{ type: Type }> | Result<never, Fail2> | { type: Type } | Res
   ): Chain extends true ?
