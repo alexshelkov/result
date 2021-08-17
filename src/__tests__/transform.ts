@@ -1,4 +1,4 @@
-import { Errs, Result, ok, fail } from '../index';
+import { Errs, Result, ok, fail, Success, Failure } from '../index';
 import { Transform } from '../result';
 import { Assert, Equal } from '../__stubs__/helpers';
 
@@ -37,7 +37,7 @@ describe('onOk', () => {
   };
 
   it('onOk success', async () => {
-    expect.assertions(4);
+    expect.assertions(3);
 
     const rOk = rnd(true);
 
@@ -47,19 +47,18 @@ describe('onOk', () => {
 
     type Expected = Assert<true, Equal<typeof transformed, Result<boolean, E1['e11'] | E2['e21']>>>;
     expect(transformed.ok()).toStrictEqual(true);
-    expect((await transformed.res()).ok()).toStrictEqual(true);
 
     const transformedAsync = rOk.onOk(onOkAsync);
 
     type ExpectedAsync = Assert<
       true,
-      Equal<typeof transformedAsync, Transform<boolean, E1['e11'] | E2['e21'], true>>
+      Equal<typeof transformedAsync, Transform<boolean, E1['e11'] | E2['e21']>>
     >;
     expect((await transformedAsync.res()).ok()).toStrictEqual(true);
   });
 
   it('onOk fail', async () => {
-    expect.assertions(4);
+    expect.assertions(3);
 
     const rErr = rnd(false);
 
@@ -72,18 +71,17 @@ describe('onOk', () => {
 
     type Expected = Assert<true, Equal<typeof r1, Result<boolean, E1['e11'] | E2['e21']>>>;
     expect(r1.err().type).toStrictEqual('e11');
-    expect((await r1.res()).err().type).toStrictEqual('e11');
 
     const r1Async = rErr.onOk(onOkAsync);
 
     type ExpectedAsync = Assert<
       true,
-      Equal<typeof r1Async, Transform<boolean, E1['e11'] | E2['e21'], true>>
+      Equal<typeof r1Async, Transform<boolean, E1['e11'] | E2['e21']>>
     >;
     expect((await r1Async.res()).err().type).toStrictEqual('e11');
   });
 
-  it('onOk success and isOk', async () => {
+  it('onOk and isOk', async () => {
     expect.assertions(6);
 
     const rOk = rnd(true);
@@ -103,7 +101,7 @@ describe('onOk', () => {
         return ok('r11');
       });
 
-      type ExpectedR1Async = Assert<true, Equal<typeof r1Async, Transform<string, never, true>>>;
+      type ExpectedR1Async = Assert<true, Equal<typeof r1Async, Transform<string, never>>>;
       expect((await r1Async.res()).ok()).toStrictEqual('r11');
 
       const r2 = rOk.onOk(() => {
@@ -128,7 +126,111 @@ describe('onOk', () => {
       expect(r4.err().type).toStrictEqual('e21');
     }
   });
+});
 
+describe('onFail', () => {
+  const onFail = () => {
+    return fail<E2['e21']>('e21');
+  };
+
+  // eslint-disable-next-line @typescript-eslint/require-await
+  const onFailAsync = async () => {
+    return fail<E2['e21']>('e21');
+  };
+
+  it('onFail success', async () => {
+    expect.assertions(4);
+
+    const rOk = rnd(true);
+
+    expect(rOk.ok()).toStrictEqual('r1');
+
+    const r1 = rOk.onFail(onFail);
+
+    type ExpectedR1 = Assert<true, Equal<typeof r1, Result<string, E2['e21']>>>;
+    expect(r1.ok()).toStrictEqual('r1');
+
+    const r1Async = rOk.onFail(onFailAsync);
+
+    type ExpectedR1Async = Assert<true, Equal<typeof r1Async, Transform<string, E2['e21']>>>;
+    expect((await r1Async.res()).ok()).toStrictEqual('r1');
+    expect((await r1Async.res()).ok()).toStrictEqual('r1'); // can call res twice
+  });
+
+  it('onFail failure', async () => {
+    expect.assertions(4);
+
+    const rErr = rnd(false);
+
+    expect(rErr.err().type).toStrictEqual('e11');
+
+    const r1 = rErr.onFail(onFail);
+
+    type ExpectedR1 = Assert<true, Equal<typeof r1, Result<string, E2['e21']>>>;
+    expect(r1.err().type).toStrictEqual('e21');
+
+    const r1Async = rErr.onFail(onFailAsync);
+
+    type ExpectedR1Async = Assert<true, Equal<typeof r1Async, Transform<string, E2['e21']>>>;
+    expect((await r1Async.res()).err().type).toStrictEqual('e21');
+    expect((await r1Async.res()).err().type).toStrictEqual('e21'); // can call res twice
+  });
+
+  it('onFail and isErr', async () => {
+    expect.assertions(3);
+
+    const rErr = rnd(false);
+
+    expect(rErr.err().type).toStrictEqual('e11');
+
+    if (rErr.isErr()) {
+      const r1 = rErr.onFail(() => {
+        return fail<E1['e11']>('e11');
+      });
+
+      type ExpectedR1 = Assert<true, Equal<typeof r1, Result<never, E1['e11']>>>;
+      expect(r1.err().type).toStrictEqual('e11');
+
+      // eslint-disable-next-line @typescript-eslint/require-await
+      const r1Async = rErr.onFail(async () => {
+        return fail<E1['e11']>('e11');
+      });
+
+      type ExpectedR1Async = Assert<true, Equal<typeof r1Async, Transform<never, E1['e11']>>>;
+      expect((await r1Async.res()).err().type).toStrictEqual('e11');
+    }
+  });
+});
+
+describe('result and transform compatibility', () => {
+  it('can assign transform to result', async () => {
+    expect.assertions(1);
+
+    const t1 = {} as Transform<string, E1['e11']>;
+
+    // eslint-disable-next-line jest/no-if
+    const r1 = Math.random() ? rnd(true) : t1;
+
+    type ExpectedR1 = Assert<true, Equal<typeof r1, Transform<string, E1['e11']>>>;
+    expect((await r1.res()).ok()).toStrictEqual('r1');
+  });
+
+  it('can assign result to transform', async () => {
+    expect.assertions(1);
+
+    let t1: Transform<string, E1['e11']>;
+
+    const r1 = rnd(true);
+
+    // eslint-disable-next-line prefer-const
+    t1 = r1;
+
+    type ExpectedT1 = Assert<true, Equal<typeof t1, Transform<string, E1['e11']>>>;
+    expect((await t1.res()).ok()).toStrictEqual('r1');
+  });
+});
+
+describe('infer type from result', () => {
   it('onOk infer type from result', () => {
     expect.assertions(1);
 
@@ -145,122 +247,50 @@ describe('onOk', () => {
 
     expect(r1.ok()).toStrictEqual(1);
   });
-});
 
-describe('onErr', () => {
-  const onErr = () => {
-    return fail<E2['e21']>('e21');
-  };
-
-  // eslint-disable-next-line @typescript-eslint/require-await
-  const onErrAsync = async () => {
-    return fail<E2['e21']>('e21');
-  };
-
-  it('onErr success', async () => {
-    expect.assertions(5);
-
-    const rOk = rnd(true);
-
-    expect(rOk.ok()).toStrictEqual('r1');
-
-    const r1 = rOk.onErr(onErr);
-
-    type ExpectedR1 = Assert<true, Equal<typeof r1, Result<string, E2['e21']>>>;
-    expect(r1.ok()).toStrictEqual('r1');
-    expect((await r1.res()).ok()).toStrictEqual('r1');
-
-    const r1Async = rOk.onErr(onErrAsync);
-
-    type ExpectedR1Async = Assert<true, Equal<typeof r1Async, Transform<string, E2['e21'], true>>>;
-    expect((await r1Async.res()).ok()).toStrictEqual('r1');
-    expect((await r1Async.res()).ok()).toStrictEqual('r1'); // can call res twice
-  });
-
-  it('onErr fail', async () => {
-    expect.assertions(5);
-
-    const rErr = rnd(false);
-
-    expect(rErr.err().type).toStrictEqual('e11');
-
-    const r1 = rErr.onErr(onErr);
-
-    type ExpectedR1 = Assert<true, Equal<typeof r1, Result<string, E2['e21']>>>;
-    expect(r1.err().type).toStrictEqual('e21');
-    expect((await r1.res()).err().type).toStrictEqual('e21');
-
-    const r1Async = rErr.onErr(onErrAsync);
-
-    type ExpectedR1Async = Assert<true, Equal<typeof r1Async, Transform<string, E2['e21'], true>>>;
-    expect((await r1Async.res()).err().type).toStrictEqual('e21');
-    expect((await r1Async.res()).err().type).toStrictEqual('e21'); // can call res twice
-  });
-
-  it('onErr fail and  isErr', async () => {
-    expect.assertions(3);
-
-    const rErr = rnd(false);
-
-    expect(rErr.err().type).toStrictEqual('e11');
-
-    if (rErr.isErr()) {
-      const r1 = rErr.onErr(() => {
-        return fail<E1['e11']>('e11');
-      });
-
-      type ExpectedR1 = Assert<true, Equal<typeof r1, Result<never, E1['e11']>>>;
-      expect(r1.err().type).toStrictEqual('e11');
-
-      // eslint-disable-next-line @typescript-eslint/require-await
-      const r1Async = rErr.onErr(async () => {
-        return fail<E1['e11']>('e11');
-      });
-
-      type ExpectedR1Async = Assert<true, Equal<typeof r1Async, Transform<never, E1['e11'], true>>>;
-      expect((await r1Async.res()).err().type).toStrictEqual('e11');
-    }
-  });
-
-  it('onErr infer type from result', () => {
+  it('onFail infer type from result', () => {
     expect.assertions(1);
 
     const rErr = rnd(false);
 
-    const r1: Result<string, E2['e21']> = rErr.onErr(() => {
+    const r1: Result<string, E2['e21']> = rErr.onFail(() => {
       return fail('e21'); // must only allow e21 type here
     });
 
     expect(r1.err().type).toStrictEqual('e21');
   });
+});
 
+describe('onErr', () => {
   it('onErr works with raw object type', () => {
-    expect.assertions(4);
+    expect.assertions(2);
 
     const rErr = rnd(false);
 
     expect(rErr.err().type).toStrictEqual('e11');
 
-    const r1 = rErr.onErr('', () => {
+    const r1 = rErr.onErr(() => {
       return { type: 'e12' };
     });
 
     expect(r1.err().type).toStrictEqual('e12');
-
-    const r11 = rErr.onErr(() => {
-      return { type: 'e12' };
-    });
-
-    expect(r11.err().type).toStrictEqual('e12');
-
-    const r2 = rErr.onErr('e', () => {
-      return { type: '12' };
-    });
-
-    expect(r2.err().type).toStrictEqual('e12');
   });
 
-  it('onErr type compatability between fail and plain types', () => {
+  it('onErr works with string type', () => {
+    expect.assertions(2);
+
+    const rErr = rnd(false);
+
+    expect(rErr.err().type).toStrictEqual('e11');
+
+    const r1 = rErr.onErr(() => {
+      return 'e12';
+    });
+
+    expect(r1.err().type).toStrictEqual('e12');
+  });
+
+  it('onErr type compatability between string and object', () => {
     expect.assertions(2);
 
     const rErr = rnd(false);
@@ -269,17 +299,37 @@ describe('onErr', () => {
 
     const r1 = rErr.onErr(() => {
       if (Math.random()) {
-        return fail<E3['e31']>('e31');
+        return 'e21';
       }
 
       return { type: 'e22' };
     });
 
-    expect(r1.err().type).toStrictEqual('e31');
+    type R1 = Success<string> | Failure<E2['e21']> | Failure<E2['e22']>;
+    type ExpectedR1 = Assert<true, Equal<typeof r1, R1>>;
+    expect(r1.err().type).toStrictEqual('e21');
+  });
+
+  it('onErr type compatability between result', () => {
+    expect.assertions(2);
+
+    const rErr = rnd(false);
+
+    expect(rErr.err().type).toStrictEqual('e11');
+
+    const r1: Result<string, Errs<E2>> = rErr.onErr(() => {
+      if (Math.random()) {
+        return 'e21';
+      }
+
+      return { type: 'e22' };
+    });
+
+    expect(r1.err().type).toStrictEqual('e21');
   });
 });
 
-describe('chaining onOk and onErr', () => {
+describe('chaining sync', () => {
   it('success then error', () => {
     expect.assertions(6);
 
@@ -329,7 +379,7 @@ describe('chaining onOk and onErr', () => {
     >;
     expect(tr2.err().type).toStrictEqual('e21');
 
-    const tr3 = trErr.onErr(() => {
+    const tr3 = trErr.onFail(() => {
       return fail<E4['e41']>('e41');
     });
 
@@ -348,7 +398,7 @@ describe('chaining onOk and onErr', () => {
         return (s2 ? ok({ r2: true }) : fail('e21')) as Result<{ r2: boolean }, E2['e21']>;
       });
 
-      const r3 = r2.onErr(() => {
+      const r3 = r2.onFail(() => {
         return fail<E3['e31']>('e31');
       });
 
@@ -363,7 +413,7 @@ describe('chaining onOk and onErr', () => {
     const chainOnErrOnOk = (s1: boolean, s2: boolean): Result<{ r2: boolean }, E3['e31']> => {
       const r1: Result<{ r1: true }, E1['e11']> = s1 ? ok({ r1: true }) : fail('e11');
 
-      const r2 = r1.onErr(() => {
+      const r2 = r1.onFail(() => {
         return fail<E3['e31']>('e31');
       });
 
@@ -379,27 +429,9 @@ describe('chaining onOk and onErr', () => {
     expect(chainOnErrOnOk(false, true).err().type).toStrictEqual('e31');
     expect(chainOnErrOnOk(false, false).err().type).toStrictEqual('e31');
   });
-
-  it('dot chaining', () => {
-    expect.assertions(1);
-
-    // eslint-disable-next-line jest/no-if
-    const r: Result<string, Errs<E1>> = Math.random() ? ok('ok') : fail('e11');
-
-    expect(
-      r
-        .onOk(() => {
-          return ok(1);
-        })
-        .onErr(() => {
-          return fail<Errs<E2>>('e21');
-        })
-        .ok()
-    ).toStrictEqual(1);
-  });
 });
 
-describe('async chaining onOk and onErr', () => {
+describe('chaining async', () => {
   it('async onOk chains', async () => {
     expect.assertions(14);
 
@@ -462,14 +494,14 @@ describe('async chaining onOk and onErr', () => {
 
     const r1 = rnd(false);
 
-    const r2 = r1.onErr(() => {
+    const r2 = r1.onFail(() => {
       return fail<E1['e12']>('e12');
     });
 
     expect(r2.err().type).toStrictEqual('e12');
 
     // eslint-disable-next-line @typescript-eslint/require-await
-    const r3 = r2.onErr(async (res) => {
+    const r3 = r2.onFail(async (res) => {
       expect(res.type).toStrictEqual('e12');
 
       return fail<E2['e21']>('e21');
@@ -478,14 +510,14 @@ describe('async chaining onOk and onErr', () => {
     expect((await r3.res()).err().type).toStrictEqual('e21');
 
     // eslint-disable-next-line @typescript-eslint/require-await
-    const r4 = r2.onErr(async (res) => {
+    const r4 = r2.onFail(async (res) => {
       expect(res.type).toStrictEqual('e12');
 
       return fail<E2['e22']>('e22');
     });
 
     // eslint-disable-next-line @typescript-eslint/require-await
-    const r5 = r3.onErr(async (res) => {
+    const r5 = r3.onFail(async (res) => {
       expect(res.type).toStrictEqual('e21');
 
       return fail<E3['e31']>('e31');
@@ -501,7 +533,7 @@ describe('async chaining onOk and onErr', () => {
 
     expect((await r6.res()).err().type).toStrictEqual('e21');
 
-    const r7 = r3.onErr('a', () => {
+    const r7 = r3.onFail(() => {
       return fail<undefined>(undefined);
     });
 
@@ -517,7 +549,7 @@ describe('async chaining onOk and onErr', () => {
     expect((await r9.res()).ok()).toStrictEqual({ r9: true });
 
     // eslint-disable-next-line @typescript-eslint/require-await
-    const r10 = r9.onErr(async () => {
+    const r10 = r9.onFail(async () => {
       return fail<E2['e21']>('e21');
     });
 
@@ -525,103 +557,267 @@ describe('async chaining onOk and onErr', () => {
   });
 });
 
-describe('named error', () => {
-  it('fail', async () => {
-    expect.assertions(4);
+/* eslint-disable @typescript-eslint/require-await,jest/no-if */
+describe('chaining async and sync', () => {
+  describe('onOk', () => {
+    it('onOk start with success', async () => {
+      expect.assertions(16);
 
-    const rErr = rnd(false);
+      const chain = async (err: boolean) => {
+        const r0 = rnd(true);
+        expect(r0.ok()).toStrictEqual('r1');
 
-    expect(rErr.err().type).toStrictEqual('e11');
+        const r1 = r0.onOk(() => {
+          return ok(true);
+        });
+        expect(r1.ok()).toStrictEqual(true);
 
-    const r1 = rErr.onErr('_', () => {
-      return fail<E1['e12']>('e12');
+        const r21 = r1.onOk(() => {
+          return ok(1);
+        });
+        expect(r21.ok()).toStrictEqual(1);
+
+        const r22 = r1.onOk(async () => {
+          return ok(2);
+        });
+        expect((await r22.res()).ok()).toStrictEqual(2);
+
+        const r31 = r22.onOk(() => {
+          return ok('r31');
+        });
+        expect((await r31.res()).ok()).toStrictEqual('r31');
+
+        const r32 = r22.onOk(async () => {
+          return ok('r32');
+        });
+        expect((await r32.res()).ok()).toStrictEqual('r32');
+
+        const r41 = err
+          ? r32.onFail(() => {
+              return fail<E3['e31']>('e31');
+            })
+          : r32.onErr(() => {
+              return 'e31';
+            });
+        expect((await r41.res()).ok()).toStrictEqual('r32');
+
+        const r42 = err
+          ? r32.onFail(async () => {
+              return fail<E3['e31']>('e31');
+            })
+          : r32.onErr(() => {
+              return 'e31' as const;
+            });
+        expect((await r42.res()).ok()).toStrictEqual('r32');
+      };
+
+      await chain(false);
+      await chain(true);
     });
 
-    expect(r1.err().type).toStrictEqual('_e12');
+    it('onOk start with error', async () => {
+      expect.assertions(5);
 
-    // eslint-disable-next-line @typescript-eslint/require-await
-    const r2 = rErr.onErr('_', async () => {
-      return fail<E1['e12']>('e12');
+      const r1 = rnd(false);
+      expect(r1.err().type).toStrictEqual('e11');
+
+      const r21 = r1.onOk(() => {
+        return ok(1);
+      });
+      expect(r21.err().type).toStrictEqual('e11');
+
+      const r22 = r1.onOk(async () => {
+        return ok(2);
+      });
+      expect((await r22.res()).err().type).toStrictEqual('e11');
+
+      const r31 = r21.onOk(async () => {
+        return ok(true);
+      });
+      expect((await r31.res()).err().type).toStrictEqual('e11');
+
+      const r32 = r22.onOk(async () => {
+        return ok(true);
+      });
+      expect((await r32.res()).err().type).toStrictEqual('e11');
     });
-
-    expect((await r2.res()).err().type).toStrictEqual('_e12');
-
-    // eslint-disable-next-line @typescript-eslint/require-await
-    const r3 = r2.onErr('_', async () => {
-      return fail<E2['e21']>('e21');
-    });
-
-    expect((await r3.res()).err().type).toStrictEqual('_e21');
   });
 
-  it('object type', async () => {
-    expect.assertions(4);
+  describe('onFail', () => {
+    it('onFail start with success', async () => {
+      expect.assertions(20);
 
-    const rErr = rnd(false);
+      const chain = async (err: boolean) => {
+        const r0 = rnd(true);
+        expect(r0.ok()).toStrictEqual('r1');
 
-    expect(rErr.err().type).toStrictEqual('e11');
+        const r1 = err
+          ? r0.onFail(() => {
+              return fail<E1['e12']>('e12');
+            })
+          : r0.onErr(() => {
+              return 'e12' as const;
+            });
+        expect(r1.ok()).toStrictEqual('r1');
 
-    const r1 = rErr.onErr('e', () => {
-      return { type: '12', name: 1 };
+        const r2 = err
+          ? r1.onFail(async () => {
+              return fail<E2['e21']>('e21');
+            })
+          : r1.onErr(async () => {
+              return 'e21' as const;
+            });
+        expect((await r2.res()).ok()).toStrictEqual('r1');
+
+        const r3 = r2.onOk(() => {
+          return ok(4);
+        });
+        expect((await r3.res()).ok()).toStrictEqual(4);
+
+        const r41 = err
+          ? r3.onFail(() => {
+              return fail<E2['e22']>('e22');
+            })
+          : r3.onErr(() => {
+              return 'e22' as const;
+            });
+        expect((await r41.res()).ok()).toStrictEqual(4);
+
+        const r42 = err
+          ? r3.onFail(async () => {
+              return fail<E3['e31']>('e31');
+            })
+          : r3.onErr(async () => {
+              return 'e31' as const;
+            });
+        expect((await r42.res()).ok()).toStrictEqual(4);
+
+        const r51 = r41.onOk(() => {
+          return ok(true);
+        });
+        expect((await r51.res()).ok()).toStrictEqual(true);
+
+        const r52 = r41.onOk(async () => {
+          return ok(true);
+        });
+        expect((await r52.res()).ok()).toStrictEqual(true);
+
+        const r61 = r42.onOk(() => {
+          return ok(true);
+        });
+        expect((await r61.res()).ok()).toStrictEqual(true);
+
+        const r62 = r42.onOk(async () => {
+          return ok(true);
+        });
+        expect((await r62.res()).ok()).toStrictEqual(true);
+      };
+
+      await chain(false);
+      await chain(true);
     });
 
-    expect(r1.err().type).toStrictEqual('e12');
+    it('onFail start with error', async () => {
+      expect.assertions(20);
 
-    // eslint-disable-next-line @typescript-eslint/require-await
-    const r2 = rErr.onErr('e', async () => {
-      return { type: '13' };
+      const chain = async (err: boolean) => {
+        const r0 = rnd(false);
+        expect(r0.err().type).toStrictEqual('e11');
+
+        const r1 = err
+          ? r0.onFail(() => {
+              return fail<E1['e12']>('e12');
+            })
+          : r0.onErr(() => {
+              return 'e12' as const;
+            });
+        expect(r1.err().type).toStrictEqual('e12');
+
+        const r2 = err
+          ? r1.onFail(async () => {
+              return fail<E2['e21']>('e21');
+            })
+          : r1.onErr(async () => {
+              return 'e21' as const;
+            });
+        expect((await r2.res()).err().type).toStrictEqual('e21');
+
+        const r3 = r2.onOk(() => {
+          return ok(4);
+        });
+        expect((await r3.res()).err().type).toStrictEqual('e21');
+
+        const r41 = err
+          ? r3.onFail(() => {
+              return fail<E2['e22']>('e22');
+            })
+          : r3.onErr(() => {
+              return 'e22' as const;
+            });
+        expect((await r41.res()).err().type).toStrictEqual('e22');
+
+        const r42 = err
+          ? r3.onFail(async () => {
+              return fail<E3['e31']>('e31');
+            })
+          : r3.onErr(async () => {
+              return 'e31' as const;
+            });
+        expect((await r42.res()).err().type).toStrictEqual('e31');
+
+        const r51 = r41.onOk(() => {
+          return ok(true);
+        });
+        expect((await r51.res()).err().type).toStrictEqual('e22');
+
+        const r52 = r41.onOk(async () => {
+          return ok(true);
+        });
+        expect((await r52.res()).err().type).toStrictEqual('e22');
+
+        const r61 = r42.onOk(() => {
+          return ok(true);
+        });
+        expect((await r61.res()).err().type).toStrictEqual('e31');
+
+        const r62 = r42.onOk(async () => {
+          return ok(true);
+        });
+        expect((await r62.res()).err().type).toStrictEqual('e31');
+      };
+
+      await chain(false);
+      await chain(true);
     });
-
-    expect((await r2.res()).err().type).toStrictEqual('e13');
-
-    // eslint-disable-next-line @typescript-eslint/require-await
-    const r3 = r2.onErr('e', async () => {
-      return { type: '14' };
-    });
-
-    expect((await r3.res()).err().type).toStrictEqual('e14');
   });
-});
 
-describe('checking type compatability', () => {
-  it.todo('a');
-
-  it('checking type compatability between fail and plain types', () => {
-    expect.assertions(2);
-
-    const rErr = rnd(false);
-
-    expect(rErr.err().type).toStrictEqual('e11');
-
-    const r1 = rErr.onErr(() => {
-      if (Math.random()) {
-        return fail<E3['e31']>('e31');
-      }
-
-      return { type: 'e22' };
-    });
-
-    expect(r1.err().type).toStrictEqual('e31');
-  });
-});
-
-describe('onErr exceptions', () => {
-  it('throw error for invalid arg type', () => {
+  it('dot chaining', () => {
     expect.assertions(1);
 
-    const r = rnd(false);
+    // eslint-disable-next-line jest/no-if
+    const r: Result<string, Errs<E1>> = Math.random() ? ok('ok') : fail('e11');
 
-    expect(() => {
-      r.onErr(undefined as never, undefined as never);
-    }).toThrow('Invalid arguments');
+    expect(
+      r
+        .onOk(() => {
+          return ok(1);
+        })
+        .onFail(() => {
+          return fail<Errs<E2>>('e21');
+        })
+        .ok()
+    ).toStrictEqual(1);
   });
+});
+/* eslint-enable @typescript-eslint/require-await,jest/no-if */
 
+describe('onErr and onFail exceptions', () => {
   it('throws error for invalid err type', async () => {
-    expect.assertions(9);
+    expect.assertions(5);
 
     const r = rnd(false);
 
-    const badResult = (): Result<never, E1['e11']> => {
+    const badResult = (): string | { type: string } => {
       return 5 as never;
     };
 
@@ -634,16 +830,8 @@ describe('onErr exceptions', () => {
       r.onErr(badResult);
     }).toThrow("Can't convert to error");
 
-    expect(() => {
-      r.onErr('', badResult);
-    }).toThrow("Can't convert to error");
-
     await expect(async () => {
       await r.onErr(badResultAsync).res();
-    }).rejects.toThrow("Can't convert to error");
-
-    await expect(async () => {
-      await r.onErr('', badResultAsync).res();
     }).rejects.toThrow("Can't convert to error");
 
     // eslint-disable-next-line @typescript-eslint/require-await
@@ -658,15 +846,7 @@ describe('onErr exceptions', () => {
     }).rejects.toThrow("Can't convert to error");
 
     await expect(async () => {
-      await r1.onErr('', badResult).res();
-    }).rejects.toThrow("Can't convert to error");
-
-    await expect(async () => {
       await r1.onErr(badResultAsync).res();
-    }).rejects.toThrow("Can't convert to error");
-
-    await expect(async () => {
-      await r1.onErr('', badResultAsync).res();
     }).rejects.toThrow("Can't convert to error");
   });
 });

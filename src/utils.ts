@@ -11,7 +11,7 @@ import {
 
 import { isPromise, isHaveStatus, isSuccessLike, isFailureLike, isErr } from './checks';
 
-import { Err } from './err';
+import { Err, ErrUtil } from './err';
 
 export class FailureException<Fail> extends Error implements PartialFailure<Fail> {
   status: 'error';
@@ -37,8 +37,7 @@ export class FailureException<Fail> extends Error implements PartialFailure<Fail
 
 const maybeFailToResult = <Data, Fail>(
   result: unknown,
-  prevResult: PartialResult<unknown, unknown>,
-  name?: string
+  prevResult: PartialResult<unknown, unknown>
 ): PartialResult<Data, Fail> => {
   if (isSuccessLike(result)) {
     return result as PartialResult<Data, Fail>;
@@ -47,30 +46,29 @@ const maybeFailToResult = <Data, Fail>(
   let failure = result as PartialFailure<Fail>;
 
   if (!isHaveStatus(result)) {
-    if (isErr(result)) {
-      const exception = new FailureException(
+    let exception;
+
+    if (typeof result === 'string') {
+      exception = new FailureException(
+        result,
+        ({ type: result } as unknown) as Fail,
+        prevResult.order,
+        prevResult.message,
+        prevResult.code
+      );
+    } else if (isErr(result)) {
+      exception = new FailureException(
         result.type,
         (result as unknown) as Fail,
         prevResult.order,
         prevResult.message,
         prevResult.code
       );
-      exception.stack = prevResult.stack;
-
-      failure = exception;
     } else {
       throw new Error("Can't convert to error");
     }
-  }
 
-  if (typeof name === 'string') {
-    const { error } = failure;
-
-    if (isErr(error) && error.type !== undefined) {
-      const type = `${name}${error.type}`;
-
-      failure.error = { ...error, type };
-    }
+    failure = exception;
   }
 
   return failure;
@@ -81,93 +79,91 @@ type OkCb<Data, Data2, Fail2> = (
   result: Result<Data, never>
 ) => Response<Data2, Fail2> | Result<Data2, Fail2>;
 
-type ErrCb<Fail, Fail2> = (
+type OkRes<Res, Fail, Data2, Fail2> = Res extends Response<Data2, Fail2>
+  ? Transform<Data2, Fail | Fail2>
+  : Result<Data2, Fail | Fail2>;
+
+type FailCb<Fail, Fail2> = (
   err: Fail,
   result: Result<never, Fail>
 ) => Response<never, Fail2> | Result<never, Fail2>;
 
-const getCb = <Fail, Fail2>(
-  name: ErrCb<Fail, Fail2> | string,
-  optCb?: ErrCb<Fail, Fail2>
-): ErrCb<Fail, Fail2> => {
-  if (optCb) {
-    return optCb;
-  }
-  if (typeof name === 'function') {
-    return name;
-  }
-  throw new Error('Invalid arguments');
-};
+type FailRes<Res, Data, Fail2> = Res extends Response<never, Fail2>
+  ? Transform<Data, Fail2>
+  : Result<Data, Fail2>;
 
-type FutureResult<Data, Fail, Data2, Fail2, Type extends string> = {
-  current: PartialSuccess<Data2> | PartialFailure<Fail2> | { type: Type };
+type ErrCb<Res, Fail> = (err: Fail, result: Result<never, Fail>) => Res;
+
+type ErrRes<Res, Data> = Res extends Promise<infer WholeRes>
+  ? Transform<Data, ErrUtil<WholeRes>>
+  : Result<Data, ErrUtil<Res>>;
+
+type FutureResult<Data, Fail, Data2, Fail2, Res extends string | { type: string }> = {
+  current: PartialSuccess<Data2> | PartialFailure<Fail2> | Res;
   prev: PartialResult<Data, Fail>;
-  name?: string;
 };
 
-const transform = <Data, Fail, Data2, Fail2, Type extends string>(
-  future: Promise<FutureResult<Data, Fail, Data2, Fail2, Type>>
-): Transform<Data | Data2, Fail | Fail2, true> => {
+const transform = <Data, Fail, Data2, Fail2, Res extends string | { type: string }>(
+  future: Promise<FutureResult<Data, Fail, Data2, Fail2, Res>>
+): Transform<Data | Data2, Fail | Fail2> => {
+  const onErr = (cb: FailCb<Fail, Fail2>) => {
+    return transform(
+      future.then(({ current, prev }) => {
+        const currentRes = maybeFailToResult<Data, Fail>(current, prev);
+
+        if (currentRes.status === 'success') {
+          return { current: (currentRes as unknown) as PartialSuccess<Data2>, prev: currentRes };
+        }
+
+        const nextRes = cb(currentRes.error, currentRes as Result<never, Fail>);
+
+        return Promise.resolve(nextRes).then((next) => {
+          return {
+            current: next,
+            prev: currentRes,
+          } as FutureResult<Data, Fail, Data2, Fail2, Res>;
+        });
+      })
+    );
+  };
+
+  const onOk = (cb: OkCb<Data, Data2, Fail2>) => {
+    return transform(
+      future.then(({ current, prev }) => {
+        const currentRes = maybeFailToResult<Data, Fail>(current, prev);
+
+        if (currentRes.status === 'error') {
+          return { current: (currentRes as unknown) as PartialFailure<Fail2>, prev: currentRes };
+        }
+
+        const nextRes = cb(currentRes.data, currentRes as Result<Data, never>);
+
+        return Promise.resolve(nextRes).then((next) => {
+          return {
+            current: next,
+            prev: currentRes,
+          } as FutureResult<Data, Fail, Data2, Fail2, Res>;
+        });
+      })
+    );
+  };
+
   const helper = {
-    onOk(cb: OkCb<Data, Data2, Fail2>) {
-      return transform(
-        future.then(({ current, prev }) => {
-          const currentRes = maybeFailToResult<Data, Fail>(current, prev);
+    onOk,
 
-          if (currentRes.status === 'error') {
-            return { current: (currentRes as unknown) as PartialFailure<Fail2>, prev: currentRes };
-          }
+    onFail: onErr,
 
-          const nextRes = cb(currentRes.data, currentRes as Result<Data, never>);
+    onErr,
 
-          return Promise.resolve(nextRes).then((next) => {
-            return { current: next, prev: currentRes } as FutureResult<
-              Data,
-              Fail,
-              Data2,
-              Fail2,
-              Type
-            >;
-          });
-        })
-      );
-    },
-    onErr(name: ErrCb<Fail, Fail2> | string, optCb?: ErrCb<Fail, Fail2>) {
-      const cb = getCb(name, optCb);
-
-      return transform(
-        future.then(({ current, prev }) => {
-          const currentRes = maybeFailToResult<Data, Fail>(
-            current,
-            prev,
-            typeof name === 'string' ? name : undefined
-          );
-
-          if (currentRes.status === 'success') {
-            return { current: (currentRes as unknown) as PartialSuccess<Data2>, prev: currentRes };
-          }
-
-          const nextRes = cb(currentRes.error, currentRes as Result<never, Fail>);
-
-          return Promise.resolve(nextRes).then((next) => {
-            return {
-              current: next,
-              prev: currentRes,
-              name: typeof name === 'string' ? name : undefined,
-            } as FutureResult<Data, Fail, Data2, Fail2, Type>;
-          });
-        })
-      );
-    },
     async res() {
-      const { current, prev, name } = await future;
+      const { current, prev } = await future;
 
       // eslint-disable-next-line @typescript-eslint/no-use-before-define
-      return complete(maybeFailToResult<Data, Fail>(current, prev, name));
+      return complete(maybeFailToResult<Data, Fail>(current, prev));
     },
   };
 
-  return (helper as unknown) as Transform<Data, Fail, true>;
+  return (helper as unknown) as Transform<Data, Fail>;
 };
 
 export const complete = <Data, Fail>(partial: PartialResult<Data, Fail>): Result<Data, Fail> => {
@@ -185,6 +181,9 @@ export const complete = <Data, Fail>(partial: PartialResult<Data, Fail>): Result
       enumerable: false,
     },
     onOk: {
+      enumerable: false,
+    },
+    onFail: {
       enumerable: false,
     },
     onErr: {
@@ -244,57 +243,71 @@ export const complete = <Data, Fail>(partial: PartialResult<Data, Fail>): Result
   };
 
   // eslint-disable-next-line @typescript-eslint/require-await
-  (result as Transform<Data, Fail>).res = async () => {
+  result.res = (async () => {
     return result;
-  };
+  }) as never;
 
-  type CbOkRes<Res, Data2, Fail2> = Res extends Response<Data2, Fail2>
-    ? Transform<Data2, Fail | Fail2, true>
-    : Result<Data2, Fail | Fail2>;
-
-  (result as Transform<Data, Fail>).onOk = <Data2, Fail2, Res>(
-    cb: (data: Data, res: Result<Data, never>) => Response<Data2, Fail2> | Result<Data2, Fail2>
-  ): CbOkRes<Res, Data2, Fail2> => {
+  (result as Success<Data>).onOk = <Res, Fail0, Data2, Fail2>(
+    cb: OkCb<Data, Data2, Fail2>
+  ): OkRes<Res, Fail0, Data2, Fail2> => {
     if (result.status === 'error') {
-      return (result as unknown) as CbOkRes<Res, Data2, Fail2>;
+      return (result as unknown) as OkRes<Res, Fail0, Data2, Fail2>;
     }
 
-    const nextRes = cb(result.data, result as Result<Data, never>);
+    const nextRes = cb(result.data, result);
 
     if (isPromise(nextRes)) {
       const transformed = nextRes.then((current) => {
         return { current, prev: result };
       });
 
-      return transform(transformed) as CbOkRes<Res, Data2, Fail2>;
+      return transform(transformed) as OkRes<Res, Fail0, Data2, Fail2>;
     }
 
-    return complete(nextRes) as CbOkRes<Res, Data2, Fail2>;
+    return complete(nextRes) as OkRes<Res, Fail0, Data2, Fail2>;
   };
 
-  (result as Transform<Data, Fail>).onErr = <Fail2>(
-    name: ErrCb<Fail, Fail2> | string,
-    optCb?: ErrCb<Fail, Fail2>
-  ): Result<Data, Fail2> | Result<Data, Fail> | Transform<Data, Fail | Fail2, true> => {
+  (result as Failure<Fail>).onFail = <Res, Data0, Fail2>(
+    cb: FailCb<Fail, Fail2>
+  ): FailRes<Res, Data0, Fail2> => {
     if (result.status === 'success') {
-      return result;
+      return (result as unknown) as FailRes<Res, Data0, Fail2>;
     }
 
-    const cb = getCb(name, optCb);
-
-    const nextRes = cb(result.error, result as Failure<Fail>);
+    const nextRes = cb(result.error, result);
 
     if (isPromise(nextRes)) {
       const transformed = nextRes.then((current) => {
-        return { current, prev: result, name: typeof name === 'string' ? name : undefined };
+        return { current, prev: result };
       });
 
-      return transform(transformed);
+      return transform(transformed) as FailRes<Res, Data0, Fail2>;
     }
 
-    return complete(
-      maybeFailToResult(nextRes, result, typeof name === 'string' ? name : undefined)
-    );
+    return complete(nextRes) as FailRes<Res, Data0, Fail2>;
+  };
+
+  (result as Failure<Fail>).onErr = <
+    Res extends ({ type: string } | string) | Promise<{ type: string } | string>,
+    Data0
+  >(
+    cb: ErrCb<Res, Fail>
+  ): ErrRes<Res, Data0> => {
+    if (result.status === 'success') {
+      return (result as unknown) as ErrRes<Res, Data0>;
+    }
+
+    const nextRes = cb(result.error, result);
+
+    if (isPromise(nextRes)) {
+      const transformed = nextRes.then((current) => {
+        return { current, prev: result };
+      });
+
+      return transform(transformed) as ErrRes<Res, Data0>;
+    }
+
+    return complete(maybeFailToResult(nextRes, result)) as ErrRes<Res, Data0>;
   };
 
   return Object.defineProperties(result, propsDefs) as Result<Data, Fail>;

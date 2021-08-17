@@ -9,8 +9,8 @@ export const ErrLevel = {
   Debug: 7,
 } as const;
 
-export type Err = {
-  readonly type: string;
+export interface Err {
+  type: string;
   message?: string;
   level?: number;
   retry?: boolean;
