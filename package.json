@@ -2,7 +2,7 @@
   "name": "lambda-res",
   "description": "Type-safe error handling without exception",
   "keywords": ["aws", "serverless", "lambda", "error", "error-handling"],
-  "version": "1.0.17",
+  "version": "1.0.18",
   "author": "Alex Shelkovskiy <alexshelkov@gmail.com>",
   "repository": "https://github.com/alexshelkov/result",
   "license": "MIT",

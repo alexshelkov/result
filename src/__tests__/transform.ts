@@ -1,4 +1,4 @@
-import { Errs, Result, ok, fail, Success, Failure } from '../index';
+import { Errs, Result, ok, fail } from '../index';
 import { Transform } from '../result';
 import { Assert, Equal } from '../__stubs__/helpers';
 
@@ -211,7 +211,10 @@ describe('result and transform compatibility', () => {
     // eslint-disable-next-line jest/no-if
     const r1 = Math.random() ? rnd(true) : t1;
 
-    type ExpectedR1 = Assert<true, Equal<typeof r1, Transform<string, E1['e11']>>>;
+    type ExpectedR1 = Assert<
+      true,
+      Equal<typeof r1, Transform<string, E1['e11']> | Result<string, E1['e11']>>
+    >;
     expect((await r1.res()).ok()).toStrictEqual('r1');
   });
 
@@ -259,6 +262,46 @@ describe('infer type from result', () => {
 
     expect(r1.err().type).toStrictEqual('e21');
   });
+
+  it('onFail from function', () => {
+    expect.assertions(2);
+
+    const r1: Result<string, E1['e11']> = rnd(false);
+
+    expect(r1.err().type).toStrictEqual('e11');
+
+    const r2 = (): Result<number, Errs<E2>> => {
+      if (r1.isErr()) {
+        return r1.onFail(() => {
+          return fail<E2['e21']>('e21');
+        });
+      }
+
+      return ok(1);
+    };
+
+    expect(r2().err().type).toStrictEqual('e21');
+  });
+
+  it('onErr from function', () => {
+    expect.assertions(2);
+
+    const r1: Result<string, E1['e11']> = rnd(false);
+
+    expect(r1.err().type).toStrictEqual('e11');
+
+    const r2 = (): Result<number, Errs<E2>> => {
+      if (r1.isErr()) {
+        return r1.onErr(() => {
+          return 'e21';
+        });
+      }
+
+      return ok(1);
+    };
+
+    expect(r2().err().type).toStrictEqual('e21');
+  });
 });
 
 describe('onErr', () => {
@@ -305,8 +348,7 @@ describe('onErr', () => {
       return { type: 'e22' };
     });
 
-    type R1 = Success<string> | Failure<E2['e21']> | Failure<E2['e22']>;
-    type ExpectedR1 = Assert<true, Equal<typeof r1, R1>>;
+    type ExpectedR1 = Assert<true, Equal<typeof r1, Result<string, E2['e21'] | E2['e22']>>>;
     expect(r1.err().type).toStrictEqual('e21');
   });
 

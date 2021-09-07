@@ -88,15 +88,12 @@ type FailCb<Fail, Fail2> = (
   result: Result<never, Fail>
 ) => Response<never, Fail2> | Result<never, Fail2>;
 
-type FailRes<Res, Data, Fail2> = Res extends Response<never, Fail2>
-  ? Transform<Data, Fail2>
-  : Result<Data, Fail2>;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type FailRes<Res, Data, Fail2> = Result<Data, Fail2>;
 
 type ErrCb<Res, Fail> = (err: Fail, result: Result<never, Fail>) => Res;
 
-type ErrRes<Res, Data> = Res extends Promise<infer WholeRes>
-  ? Transform<Data, ErrUtil<WholeRes>>
-  : Result<Data, ErrUtil<Res>>;
+type ErrRes<Res, Data> = Result<Data, ErrUtil<Res>>;
 
 type FutureResult<Data, Fail, Data2, Fail2, Res extends string | { type: string }> = {
   current: PartialSuccess<Data2> | PartialFailure<Fail2> | Res;
