@@ -136,7 +136,7 @@ if (result.isErr()) {
 // that is why isErr check used first
 ```
 
-### Mapping result with `onOk` and `onErr`
+### Mapping result with `onOk` and `onErr` (`onFail`)
 
 ```typescript
 import { Response, Errs, ok, fail, nope } from 'lambda-res';
@@ -207,10 +207,9 @@ Returns:
 
 ------------------------------------------------------------------------
 
-#### `Result<Data, Fail>`.`onErr`
+#### `Result<Data, Fail>`.`onErr`, `Result<Data, Fail>`.`onFail`
 
-Doesn't change `Data` and returns new `Fail2` — used to map one type of errors to another. Unlike `onOk`, `onErr` 
-can't return successful result, but it may return an object with error type.  
+Doesn't change `Data` and returns new `Fail2` — used to map one type of errors to another.
 
 Params:
 
@@ -220,5 +219,6 @@ Params:
 
 Returns:
 
-- `Result<never, Fail2>`, `{ type: string }` or `Response<never, Fail2>`, `Promise<{ type: string }>`
+- `onErr`: `string`, `{ type: string }` or `Promise<string>`, `Promise<{ type: string }>`
+- `onFail`: `Result<never, Fail2>` or `Response<never, Fail2>`
 
