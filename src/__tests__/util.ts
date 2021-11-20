@@ -1,4 +1,4 @@
-import { Err, Result, ok, fail, err, compare, nope } from '../index';
+import { Err, Result, ok, fail, throwFail, err, compare, nope } from '../index';
 
 describe('util', () => {
   it('works with skip option', () => {
@@ -66,11 +66,33 @@ describe('util', () => {
     }).toThrow('Unknown status');
   });
 
+  it('throw fail', () => {
+    expect.assertions(2);
+
+    expect(() => {
+      throwFail<Err>('Thrown');
+    }).toThrow('Thrown');
+
+    expect(() => {
+      const a: string | undefined = Math.random() === -1 ? 'never' : undefined;
+
+      if (!a) {
+        throwFail<Err>('Thrown');
+      }
+
+      // undefined is removed because
+      // throwFail returns never
+      const b: string = a;
+
+      expect(b).toStrictEqual('never');
+    }).toThrow('Thrown');
+  });
+
   it('never will throw exception if called', () => {
     expect.assertions(1);
 
     expect(() => {
-      return nope(undefined as never);
+      nope(undefined as never);
     }).toThrow('Unreachable');
   });
 });

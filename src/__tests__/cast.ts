@@ -5,11 +5,11 @@ describe('to result', () => {
     expect.assertions(2);
 
     expect(() => {
-      return toResult(null);
+      toResult(null);
     }).toThrow('Unexpected input');
 
     expect(() => {
-      return toResult('123');
+      toResult('123');
     }).toThrow('Unexpected input');
   });
 
@@ -17,7 +17,7 @@ describe('to result', () => {
     expect.assertions(1);
 
     expect(() => {
-      return toResult({ data: 1 });
+      toResult({ data: 1 });
     }).toThrow('Unexpected input');
   });
 

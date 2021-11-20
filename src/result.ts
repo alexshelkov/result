@@ -77,14 +77,6 @@ export interface Failure<Fail> extends PartialFailure<Fail> {
 
   onOk(): never;
 
-  // onFail<Res1 extends Result<never, Fail2>, Res2 extends Response<never, Fail2>, Res extends Res1  | Res2, Data = never, Fail2 = never>(
-  //   this: Result<Data, Fail>,
-  //   cb: (
-  //     err: Fail,
-  //     result: Result<never, Fail>
-  //   ) => Res
-  // ): Res extends Response<never, Fail2> ? Transform<Data, Fail2> : Result<Data, Fail2>;
-
   onFail<Data = never, Fail2 = never>(
     this: Result<Data, Fail>,
     cb: (err: Fail, result: Result<never, Fail>) => Result<never, Fail2>
@@ -94,17 +86,6 @@ export interface Failure<Fail> extends PartialFailure<Fail> {
     this: Result<Data, Fail>,
     cb: (err: Fail, result: Result<never, Fail>) => Response<never, Fail2>
   ): Transform<Data, Fail2>;
-
-  // onErr<
-  //   Type extends string,
-  //   Res extends ({ type: Type } | Type) | Promise<{ type: Type } | Type>,
-  //   Data = never
-  //   >(
-  //   this: Result<Data, Fail>,
-  //   cb: (err: Fail, result: Result<never, Fail>) => Res
-  // ): Res extends Promise<infer WholeRes>
-  //   ? Transform<Data, ErrUtil<WholeRes>>
-  //   : Result<Data, ErrUtil<Res>>;
 
   onErr<Type extends string, Res extends { type: Type } | Type, Data = never>(
     this: Result<Data, Fail>,

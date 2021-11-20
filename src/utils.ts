@@ -316,7 +316,9 @@ type OkMessage = {
   skip?: boolean;
 };
 
-export const ok = <Data = never>(
+export type OkFn = <Data = never>(data: Data, params?: OkMessage) => Success<Data>;
+
+export const ok: OkFn = <Data = never>(
   data: Data,
   { code, order, skip }: OkMessage = {}
 ): Success<Data> => {
@@ -372,7 +374,12 @@ export const err = <Fail = never>(
 
 type ErrorMessage<Error> = FailMessage & Omit<Error, 'type' | 'message'>;
 
-export const fail = <Fail extends Err | undefined = never>(
+export type FailFn = <Fail extends Err | undefined = never>(
+  type: Fail extends Err ? Fail['type'] : undefined,
+  params?: ErrorMessage<Fail>
+) => Failure<Fail>;
+
+export const fail: FailFn = <Fail extends Err | undefined = never>(
   type: Fail extends Err ? Fail['type'] : undefined,
   { message, code, order, skip, ...error }: ErrorMessage<Fail> = {} as ErrorMessage<Fail>
 ): Failure<Fail> => {
@@ -383,6 +390,18 @@ export const fail = <Fail extends Err | undefined = never>(
   } as unknown) as Fail;
 
   return err(failure, { message, code, order, skip });
+};
+
+export type ThrowFailFn = <Fail extends Err | undefined = never>(
+  type: Fail extends Err ? Fail['type'] : undefined,
+  params?: ErrorMessage<Fail>
+) => never;
+
+export const throwFail: ThrowFailFn = <Fail extends Err | undefined = never>(
+  type: Fail extends Err ? Fail['type'] : undefined,
+  params: ErrorMessage<Fail> = {} as ErrorMessage<Fail>
+): never => {
+  throw fail(type, params);
 };
 
 export const compare = <Data1, Error1, Data2, Error2>(
