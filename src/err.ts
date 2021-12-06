@@ -16,7 +16,7 @@ export interface Err {
   retry?: boolean;
   notify?: boolean;
   fatal?: boolean;
-};
+}
 
 // eslint-disable-next-line @typescript-eslint/ban-types
 export type ErrUtil<T = unknown, A = {}> = T extends string
