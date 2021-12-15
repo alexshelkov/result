@@ -45,6 +45,7 @@ module.exports = {
         'no-param-reassign': 'off',
         'arrow-body-style': ['error', 'always'],
         'jest/no-conditional-expect': 'off',
+        'jest/prefer-to-be': 'off',
         '@typescript-eslint/no-unused-vars': [
           'error',
           { varsIgnorePattern: '^Expected*', argsIgnorePattern: '^_' },

@@ -31,10 +31,10 @@ describe('result and success/failure types compatability', () => {
 
     expect(r1.ok()).toStrictEqual('ok1');
 
-    const r2: Result<string, never> = ({
+    const r2: Result<string, never> = {
       status: 'success',
       data: 'ok2',
-    } as unknown) as Success<string>;
+    } as unknown as Success<string>;
 
     expect(r2.data).toStrictEqual('ok2');
   });
@@ -46,10 +46,10 @@ describe('result and success/failure types compatability', () => {
 
     expect(r1.err().type).toStrictEqual('e1');
 
-    const r2: Result<never, E1> = ({
+    const r2: Result<never, E1> = {
       status: 'error',
       error: { type: 'e1' },
-    } as unknown) as Failure<E1>;
+    } as unknown as Failure<E1>;
 
     expect(r2.error.type).toStrictEqual('e1');
   });
@@ -57,7 +57,7 @@ describe('result and success/failure types compatability', () => {
   it('result is assignable to result with never as success or error', () => {
     expect.assertions(2);
 
-    const r1: Result<string, E1> = ({ status: 'success', data: 'ok1' } as unknown) as Result<
+    const r1: Result<string, E1> = { status: 'success', data: 'ok1' } as unknown as Result<
       string,
       never
     >;
@@ -65,10 +65,10 @@ describe('result and success/failure types compatability', () => {
     // eslint-disable-next-line jest/no-if
     expect(r1.status === 'success' ? r1.data : undefined).toStrictEqual('ok1');
 
-    const r2: Result<string, E1> = ({
+    const r2: Result<string, E1> = {
       status: 'error',
       error: { type: 'e1' },
-    } as unknown) as Result<never, E1>;
+    } as unknown as Result<never, E1>;
 
     // eslint-disable-next-line jest/no-if
     expect(r2.status === 'error' ? r2.error.type : undefined).toStrictEqual('e1');

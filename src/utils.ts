@@ -51,7 +51,7 @@ const maybeFailToResult = <Data, Fail>(
     if (typeof result === 'string') {
       exception = new FailureException(
         result,
-        ({ type: result } as unknown) as Fail,
+        { type: result } as unknown as Fail,
         prevResult.order,
         prevResult.message,
         prevResult.code
@@ -59,7 +59,7 @@ const maybeFailToResult = <Data, Fail>(
     } else if (isErr(result)) {
       exception = new FailureException(
         result.type,
-        (result as unknown) as Fail,
+        result as unknown as Fail,
         prevResult.order,
         prevResult.message,
         prevResult.code
@@ -109,7 +109,7 @@ const transform = <Data, Fail, Data2, Fail2, Res extends string | { type: string
         const currentRes = maybeFailToResult<Data, Fail>(current, prev);
 
         if (currentRes.status === 'success') {
-          return { current: (currentRes as unknown) as PartialSuccess<Data2>, prev: currentRes };
+          return { current: currentRes as unknown as PartialSuccess<Data2>, prev: currentRes };
         }
 
         const nextRes = cb(currentRes.error, currentRes as Result<never, Fail>);
@@ -130,7 +130,7 @@ const transform = <Data, Fail, Data2, Fail2, Res extends string | { type: string
         const currentRes = maybeFailToResult<Data, Fail>(current, prev);
 
         if (currentRes.status === 'error') {
-          return { current: (currentRes as unknown) as PartialFailure<Fail2>, prev: currentRes };
+          return { current: currentRes as unknown as PartialFailure<Fail2>, prev: currentRes };
         }
 
         const nextRes = cb(currentRes.data, currentRes as Result<Data, never>);
@@ -160,7 +160,7 @@ const transform = <Data, Fail, Data2, Fail2, Res extends string | { type: string
     },
   };
 
-  return (helper as unknown) as Transform<Data, Fail>;
+  return helper as unknown as Transform<Data, Fail>;
 };
 
 export const complete = <Data, Fail>(partial: PartialResult<Data, Fail>): Result<Data, Fail> => {
@@ -248,7 +248,7 @@ export const complete = <Data, Fail>(partial: PartialResult<Data, Fail>): Result
     cb: OkCb<Data, Data2, Fail2>
   ): OkRes<Res, Fail0, Data2, Fail2> => {
     if (result.status === 'error') {
-      return (result as unknown) as OkRes<Res, Fail0, Data2, Fail2>;
+      return result as unknown as OkRes<Res, Fail0, Data2, Fail2>;
     }
 
     const nextRes = cb(result.data, result);
@@ -268,7 +268,7 @@ export const complete = <Data, Fail>(partial: PartialResult<Data, Fail>): Result
     cb: FailCb<Fail, Fail2>
   ): FailRes<Res, Data0, Fail2> => {
     if (result.status === 'success') {
-      return (result as unknown) as FailRes<Res, Data0, Fail2>;
+      return result as unknown as FailRes<Res, Data0, Fail2>;
     }
 
     const nextRes = cb(result.error, result);
@@ -291,7 +291,7 @@ export const complete = <Data, Fail>(partial: PartialResult<Data, Fail>): Result
     cb: ErrCb<Res, Fail>
   ): ErrRes<Res, Data0> => {
     if (result.status === 'success') {
-      return (result as unknown) as ErrRes<Res, Data0>;
+      return result as unknown as ErrRes<Res, Data0>;
     }
 
     const nextRes = cb(result.error, result);
@@ -307,7 +307,7 @@ export const complete = <Data, Fail>(partial: PartialResult<Data, Fail>): Result
     return complete(maybeFailToResult(nextRes, result)) as ErrRes<Res, Data0>;
   };
 
-  return Object.defineProperties(result, propsDefs) as Result<Data, Fail>;
+  return Object.defineProperties(result, propsDefs);
 };
 
 type OkMessage = {
@@ -383,11 +383,11 @@ export const fail: FailFn = <Fail extends Err | undefined = never>(
   type: Fail extends Err ? Fail['type'] : undefined,
   { message, code, order, skip, ...error }: ErrorMessage<Fail> = {} as ErrorMessage<Fail>
 ): Failure<Fail> => {
-  const failure = ({
+  const failure = {
     ...error,
     type,
     message,
-  } as unknown) as Fail;
+  } as unknown as Fail;
 
   return err(failure, { message, code, order, skip });
 };
