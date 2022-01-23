@@ -1,8 +1,12 @@
 import { Err } from './err';
 import { Failure, Success } from './result';
 
-export const isErr = (input: unknown): input is Err => {
+export const isUnknownErr = (input: unknown): input is Err => {
   return typeof input === 'object' && input !== null && 'type' in input;
+};
+
+export const isErr = <Error = Err>(input: Error): input is Error extends Err ? Error : never => {
+  return isUnknownErr(input);
 };
 
 export const isErrType = <

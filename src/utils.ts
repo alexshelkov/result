@@ -9,7 +9,14 @@ import {
   Response,
 } from './result';
 
-import { isPromise, isHaveStatus, isSuccessLike, isFailureLike, isErr } from './checks';
+import {
+  isPromise,
+  isHaveStatus,
+  isSuccessLike,
+  isFailureLike,
+  isErr,
+  isUnknownErr,
+} from './checks';
 
 import { Err, ErrUtil } from './err';
 
@@ -56,7 +63,7 @@ const maybeFailToResult = <Data, Fail>(
         prevResult.message,
         prevResult.code
       );
-    } else if (isErr(result)) {
+    } else if (isUnknownErr(result)) {
       exception = new FailureException(
         result.type,
         result as unknown as Fail,
