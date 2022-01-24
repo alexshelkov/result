@@ -8,7 +8,7 @@
     "error",
     "error-handling"
   ],
-  "version": "1.0.21",
+  "version": "1.0.22",
   "author": "Alex Shelkovskiy <alexshelkov@gmail.com>",
   "repository": "https://github.com/alexshelkov/result",
   "license": "MIT",
