@@ -77,15 +77,11 @@ describe('error utils', () => {
 
     // eslint-disable-next-line jest/no-if
     if (isErrType('test', o1)) {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-      o1 as { type: 'test' };
       expect(o1.type).toStrictEqual('test');
     }
 
     // eslint-disable-next-line jest/no-if
     if (isErrType('test2', o1)) {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-      o1 as never;
       expect(o1).toBeFalsy(); // this must be unreachable
     }
 

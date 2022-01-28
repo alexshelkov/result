@@ -7,14 +7,10 @@ export const isErr = <Error = Err>(
   return typeof input === 'object' && input !== null && 'type' in input;
 };
 
-export const isErrType = <
-  Type extends string,
-  Fail,
-  Error extends Fail = Fail extends { type: Type } ? Fail : never
->(
+export const isErrType = <Fail, Type extends string = string>(
   type: Type,
   input: Fail
-): input is Error => {
+): input is Fail extends { type: Type } ? Fail : never => {
   if (isErr(input)) {
     return input.type === type;
   }

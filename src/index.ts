@@ -17,3 +17,5 @@ export {
   FailFn,
   ThrowFailFn,
 } from './utils';
+
+export { GetData, GetError } from './infer';
