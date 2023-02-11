@@ -39,10 +39,6 @@ export const isFailureLike = <Error>(input: unknown): input is Failure<Error> =>
     return false;
   }
 
-  if (input.status !== 'error') {
-    return false;
-  }
-
   return input.status === 'error';
 };
 
